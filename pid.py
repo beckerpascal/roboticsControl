@@ -18,7 +18,7 @@ class PID:
     def control(self, input, reference=None):
         """
         Compute a control value for @input. If no @reference is used, fall
-        back to self.reference. 
+        back to self.reference.
         """
         # Calculate new error and accumulate
         error = (reference if reference else self.reference) - input
