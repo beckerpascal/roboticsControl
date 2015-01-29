@@ -16,6 +16,10 @@ class PID:
         self.anti_windup = False
 
     def control(self, input, reference=None):
+        """
+        Compute a control value for @input. If no @reference is used, fall
+        back to self.reference. 
+        """
         # Calculate new error and accumulate
         error = (reference if reference else self.reference) - input
         self.accumulated_error += error
@@ -43,3 +47,7 @@ class PID:
         self.anti_windup = True if acc_min is not False else False
         self.accumulator_min = acc_min
         self.accumulator_max = acc_max if acc_max is not None else -acc_min
+
+
+if __name__ == "__main__":
+    print("No tests, man!")
