@@ -6,12 +6,12 @@ class PID:
     A PID controller sporting an option to do accumulator min/max anti-windup.
     """
 
-    def __init__(self, Kp=1.0, Ki=0.0, Kd=0.0, reference=None):
+    def __init__(self, Kp=1.0, Ki=0.0, Kd=0.0, reference=None, initial=None):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
         self.reference = reference
-        self.previous_error = 0.0
+        self.previous_error = 0.0 if (reference is None or initial is None) else (reference - initial)
         self.accumulated_error = 0.0
         self.anti_windup = False
 
@@ -21,8 +21,9 @@ class PID:
         back to self.reference.
         """
         # Calculate new error and accumulate
-        error = (reference if reference else self.reference) - input
+        error = (self.reference if reference is None else reference) - input
         self.accumulated_error += error
+        error_diff = error - self.previous_error
         # Check for accumulator limits
         if (self.anti_windup):
             if self.accumulated_error < self.accumulator_min:
@@ -30,8 +31,8 @@ class PID:
             elif self.accumulated_error > self.accumulator_max:
                 self.accumulated_error = self.accumulated_max
         # Calculate control output
-        P_term = self.Kp * self.error
-        D_term = self.Kd * (error - self.previous_error)
+        P_term = self.Kp * error
+        D_term = self.Kd * error_diff
         I_term = self.Ki * self.accumulated_error
         control = P_term + I_term + D_term
         # Store current error
@@ -51,6 +52,7 @@ class PID:
 
 if __name__ == "__main__":
     from math import *
+    import random
 
     class robot:
         """
@@ -140,3 +142,32 @@ if __name__ == "__main__":
 
         def __repr__(self):
             return '[x=%.5f y=%.5f orient=%.5f]' % (self.x, self.y, self.orientation)
+
+
+    def run(param1, param2, param3):
+        # Robot
+        myrobot = robot()
+        myrobot.set(0.0, 1.0, 0.0)
+        speed = 1.0 # motion distance is equal to speed (we assume time = 1)
+        N = 100
+        myrobot.set_steering_drift(10.0 / 180.0 * pi)
+
+        # PID & results
+        results = []
+        pid = PID(param1, param3, param2, 0.0, myrobot.y)
+
+        # Loop some
+        for i in range(N):
+            steering = pid.control(myrobot.y)
+            myrobot = myrobot.move(steering, speed)
+            results.append(myrobot.y)
+
+        return results
+
+    # Call your function with parameters of (0.2, 3.0, and 0.004)
+    results = run(0.2, 3.0, 0.004)
+
+    if results[len(results)-1] > 0.06:
+        print("It' broken, man! %.2f / 0.06" % (results[len(results)-1]))
+    else:
+        print("Goog enough, man!")
