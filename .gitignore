@@ -1,0 +1,6 @@
+# V-REP libs
+*.so
+*.dylib
+
+# Python temporaries
+*.pyc
