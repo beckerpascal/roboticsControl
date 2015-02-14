@@ -45,10 +45,17 @@ if __name__ == '__main__':
         else:
             print 'Remote API function call returned with error code: ', res
 
-        for i in xrange(20):
-            errLeft = simxSetJointForce(client, left_motor, 100000, simx_opmode_oneshot_wait)
-            errRight = simxSetJointForce(client, right_motor, -100000, simx_opmode_oneshot_wait)
-            log(client, str(errLeft) + ' ' + str(errRight))
+        sign = 1
+        #for i in xrange(20):
+        errLeft = simxSetJointForce(client, left_motor, 100000, simx_opmode_oneshot_wait)
+        errRight = simxSetJointForce(client, right_motor, -100000, simx_opmode_oneshot_wait)
+        log(client, 'Error left/right: ' + str(errLeft) + ' ' + str(errRight))
+
+        #sign *= -1
+        valLeft = simxSetJointTargetVelocity(client,left_motor,1,simx_opmode_oneshot)
+        valRight = simxSetJointTargetVelocity(client,right_motor,1,simx_opmode_oneshot)
+        log(client, 'Values left/right: ' + str(valLeft) + ' ' + str(valRight))
+            
         simxFinish(-1)
     else:
         print '-- Failed connecting to remote API server'
