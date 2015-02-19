@@ -24,8 +24,11 @@ if __name__ == '__main__':
         if err == simx_return_ok:
             log(client, 'Number of objects in the scene: %d' % len(objs))
         else:
-            log(client, 'ERROR GetObjects code %d' % res)
+            log(client, 'ERROR GetObjects code %d' % err)
 
+        err = simxStartSimulation(client, simx_opmode_oneshot_wait)
+        if err > 1:
+            log(client, 'ERROR StartSimulation code %d' % err)
         simxFinish(-1)
     else:
         print '-- Failed connecting to remote API server'
