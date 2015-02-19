@@ -30,7 +30,7 @@ class SegwayController(object):
                                              right_vel, simx_opmode_oneshot_wait)
         err = err_l or err_r
         if err: # != simx_return_ok
-            log(self.client, 'ERROR SetJointTargetVelocity code %d' % ('simxSetJointTargetVelocity'))
+            log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
 
 
 ##############################################################################
@@ -38,7 +38,7 @@ class SegwayController(object):
 ##############################################################################
 
 if __name__ == '__main__':
-    print '-- Starting Python client'
+    print '-- Starting controller client'
     simxFinish(-1) # just in case, close all opened connections
 
     addr = '127.0.0.1'
@@ -48,8 +48,7 @@ if __name__ == '__main__':
     client = simxStart(addr, port, True, True, 5000, 5)
 
     if client != -1:
-        print '-- Connected to remote API server with id: %d' % (client)
-        log(client, 'Client connected at port %d' % port)
+        log(client, 'Controller client connected to client %d at port %d' % (client, port))
 
         segway_controller = SegwayController(client)
         segway_controller.setup_motors('leftMotor', 'rightMotor')
