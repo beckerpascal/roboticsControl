@@ -8,6 +8,11 @@ class SegwayController(object):
     def __init__(self, client):
         self.client = client
 
+    def setup_body(self, body_name='body'):
+        err, self.body = simxGetObjectHandle(self.client, body_name, simx_opmode_oneshot_wait)
+        if err:
+            log(self.client, 'ERROR GetObjectHandle code %d' % err)
+
     def setup_motors(self, left_motor_name, right_motor_name):
         err_l, self.left_motor = simxGetObjectHandle(self.client, left_motor_name, simx_opmode_oneshot_wait)
         err_r, self.right_motor = simxGetObjectHandle(self.client, right_motor_name, simx_opmode_oneshot_wait)
@@ -51,6 +56,7 @@ if __name__ == '__main__':
         log(client, 'Controller client connected to client %d at port %d' % (client, port))
 
         segway_controller = SegwayController(client)
+        segway_controller.setup_body('body')
         segway_controller.setup_motors('leftMotor', 'rightMotor')
 
         segway_controller.set_target_velocities(1, -1)
