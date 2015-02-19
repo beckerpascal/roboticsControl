@@ -37,6 +37,18 @@ class SegwayController(object):
         if err: # != simx_return_ok
             log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
 
+    def setup_control(self, balance_controller):
+        self.balance_controller = balance_controller
+
+    def run(self):
+        # OPMODE Should should be changed to stream'n'buffer
+        err, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
+        if err:
+            log(self.client, 'ERROR GetObjectOrientation code %d' % err)
+        else:
+            log(self.client, euler_angles)
+        #self.balance_controller.control()
+
 
 ##############################################################################
 # MAIN
@@ -59,8 +71,12 @@ if __name__ == '__main__':
         segway_controller.setup_body('body')
         segway_controller.setup_motors('leftMotor', 'rightMotor')
 
+        segway_controller.run()
+
         segway_controller.set_target_velocities(1, -1)
         log(client, 'Speed set to %d, %d' % (1, -1))
+
+        segway_controller.run()
     else:
         print '-- Failed connecting to remote API server'
 
