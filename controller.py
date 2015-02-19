@@ -70,7 +70,7 @@ if __name__ == '__main__':
     simxFinish(-1) # just in case, close all opened connections
 
     addr = '127.0.0.1'
-    port = int(sys.argv[1] if len(sys.argv) > 1 else 19999)
+    port = int(sys.argv[1])
     print '-- Connecting to %s:%d' % (addr, port)
 
     client = simxStart(addr, port, True, True, 5000, 5)
