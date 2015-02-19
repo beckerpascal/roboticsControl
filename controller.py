@@ -2,6 +2,7 @@
 import sys
 from vrep import *
 from util import *
+from pid import PID
 
 class SegwayController(object):
 
@@ -41,13 +42,23 @@ class SegwayController(object):
         self.balance_controller = balance_controller
 
     def run(self):
-        # OPMODE Should should be changed to stream'n'buffer
-        err, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
-        if err:
-            log(self.client, 'ERROR GetObjectOrientation code %d' % err)
-        else:
-            log(self.client, euler_angles)
-        #self.balance_controller.control()
+        #segway_controller.set_target_velocities(1, -1)
+        #log(client, 'Speed set to %d, %d' % (1, -1))
+
+        ok = True
+        while ok:
+            # OPMODE Should should be changed to stream'n'buffer
+            err, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
+            if err:
+                log(self.client, 'ERROR GetObjectOrientation code %d' % err)
+                ok = False
+            else:
+                log(self.client, euler_angles)
+                alpha, beta, gamma = euler_angles
+                control = self.balance_controller.control(beta)
+                log(self.client, control)
+                segway_controller.set_target_velocities(control, control)
+
 
 
 ##############################################################################
@@ -71,12 +82,11 @@ if __name__ == '__main__':
         segway_controller.setup_body('body')
         segway_controller.setup_motors('leftMotor', 'rightMotor')
 
-        segway_controller.run()
-
-        segway_controller.set_target_velocities(1, -1)
-        log(client, 'Speed set to %d, %d' % (1, -1))
+        balance_PID = PID(5.0, 0.1, 2.0, 0.0, 0.0)
+        segway_controller.setup_control(balance_PID)
 
         segway_controller.run()
+
     else:
         print '-- Failed connecting to remote API server'
 
