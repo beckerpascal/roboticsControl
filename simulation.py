@@ -26,6 +26,7 @@ if __name__ == '__main__':
         else:
             log(client, 'ERROR GetObjects code %d' % err)
 
+        # Simulatik instace control begins here
         err = simxStartSimulation(client, simx_opmode_oneshot_wait)
         if err > 1:
             log(client, 'ERROR StartSimulation code %d' % err)
