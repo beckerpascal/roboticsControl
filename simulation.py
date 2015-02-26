@@ -2,6 +2,7 @@
 import sys
 from vrep import *
 from util import *
+from controller import *
 
 
 ##############################################################################
@@ -26,13 +27,23 @@ if __name__ == '__main__':
         else:
             log(client, 'ERROR GetObjects code %d' % err)
 
-        # Simulatik instace control begins here
+        # Create a segway controller
+        segway_controller = SegwayController(client)
+        segway_controller.setup_body('body')
+        segway_controller.setup_motors('leftMotor', 'rightMotor')
+
+        balance_PID = PID(5.0, 0.1, 2.0, 0.0, 0.0)
+        segway_controller.setup_control(balance_PID)
+
+        # Start a simulation
         err = simxStartSimulation(client, simx_opmode_oneshot_wait)
         if err > 1:
             log(client, 'ERROR StartSimulation code %d' % err)
+        segway_controller.run()
+
         simxFinish(-1)
     else:
         print '-- Failed connecting to remote API server'
 
     simxFinish(-1)
-    print '-- Terminating Python client'
+    print '-- Terminating master client'

@@ -57,38 +57,8 @@ class SegwayController(object):
                 alpha, beta, gamma = euler_angles
                 control = self.balance_controller.control(beta)
                 log(self.client, control)
-                segway_controller.set_target_velocities(control, control)
+                self.set_target_velocities(control, control)
 
-
-
-##############################################################################
-# MAIN
-##############################################################################
 
 if __name__ == '__main__':
-    print '-- Starting controller client'
-    simxFinish(-1) # just in case, close all opened connections
-
-    addr = '127.0.0.1'
-    port = int(sys.argv[1])
-    print '-- Connecting to %s:%d' % (addr, port)
-
-    client = simxStart(addr, port, True, True, 5000, 5)
-
-    if client != -1:
-        log(client, 'Controller client connected to client %d at port %d' % (client, port))
-
-        segway_controller = SegwayController(client)
-        segway_controller.setup_body('body')
-        segway_controller.setup_motors('leftMotor', 'rightMotor')
-
-        balance_PID = PID(5.0, 0.1, 2.0, 0.0, 0.0)
-        segway_controller.setup_control(balance_PID)
-
-        segway_controller.run()
-
-    else:
-        print '-- Failed connecting to remote API server'
-
-    simxFinish(-1)
-    print '-- Terminating Python client'
+    print '-- Please use simulation.py instead!'
