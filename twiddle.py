@@ -21,7 +21,7 @@ class Twiddle:
         best_params = [-1 for p in self.params]
         # Catch ctrl-Cs here since the interesting data (best params) are here
         try:
-            while self.best_error > self.tolerance:
+            while self.error_min > self.tolerance:
                 for i in range(len(self.params)):
                     self.params[i] += self.deltas[i]
                     error = error_function(self.params)
