@@ -16,6 +16,9 @@ class Twiddle:
         """
         Calculate the tuned parameters
         """
+        # Initialize a buffered vector for the best parameters found for
+        # cleaner keyboard interrupt handling
+        best_params = [-1 for p in self.params]
         while self.best_error > self.tolerance:
             for i in range(len(self.params)):
                 self.params[i] += self.deltas[i]
@@ -36,5 +39,6 @@ class Twiddle:
                         # Thus, make it smaller and try again
                         self.params[i] += self.deltas[i]
                         self.deltas[i] *= 0.9
+            best_params = self.params
 
-        return self.params
+        return best_params
