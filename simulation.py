@@ -6,7 +6,7 @@ from controller import *
 from twiddle import *
 
 
-class SegwayTuner(object):
+class SimulationController(object):
     """
     A class for running the simulation. Mostly useful for holding data such as
     the client object.
@@ -75,21 +75,11 @@ if __name__ == '__main__':
         else:
             log(client, 'ERROR GetObjects code %d' % err)
 
-        # Create a segway controller
-        segway_controller = SegwayController(client)
-        segway_controller.setup_body('body')
-        segway_controller.setup_motors('leftMotor', 'rightMotor')
+        # Create a simulation controller to run the tuning
+        simulation_controller = SimulationController(client)
+        best_params = simulation_controller.run()
+        print str(best_params)
 
-        balance_PID = PID(5.0, 0.1, 2.0, 0.0, 0.0)
-        segway_controller.setup_control(balance_PID)
-
-        # Start a simulation
-        err = simxStartSimulation(client, simx_opmode_oneshot_wait)
-        if err > 1:
-            log(client, 'ERROR StartSimulation code %d' % err)
-        segway_controller.run()
-
-        simxFinish(-1)
     else:
         print '-- Failed connecting to remote API server'
 
