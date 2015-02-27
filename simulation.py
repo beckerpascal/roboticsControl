@@ -50,7 +50,7 @@ class SegwayTuner(object):
         Run the simulation continuously and tune the parameters. Ctrl-Cs are
         caught on the self.tuner.tune function. Returns the best parameters.
         """
-        return self.tuner.tune(single_run)
+        return self.tuner.tune(self.single_run)
 
 
 ##############################################################################
