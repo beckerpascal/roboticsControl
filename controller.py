@@ -31,12 +31,12 @@ class SegwayController(object):
         err_r = None
         if left_vel is not None:
             err_l = simxSetJointTargetVelocity(self.client, self.left_motor,
-                                             left_vel, simx_opmode_oneshot_wait)
+                                               left_vel, simx_opmode_oneshot_wait)
         if right_vel is not None:
             err_r = simxSetJointTargetVelocity(self.client, self.right_motor,
-                                             right_vel, simx_opmode_oneshot_wait)
+                                               right_vel, simx_opmode_oneshot_wait)
         err = err_l or err_r
-        if err: # != simx_return_ok
+        if err:  # != simx_return_ok
             log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
 
     def setup_control(self, balance_controller):
@@ -55,8 +55,10 @@ class SegwayController(object):
         return vel_tot > 10.0 ** -5
 
     def run(self, condition=None):
+        # Default condition to self.zero_velocity_condition
         condition = condition if condition else self.zero_velocity_condition
 
+        cost = 0
         ok = True
         while ok:
             # OPMODE Should should be changed to stream'n'buffer
@@ -67,13 +69,17 @@ class SegwayController(object):
                 log(self.client, 'ERROR GetObjectOrientation/Velocity code %d' % err)
                 ok = False
                 break
-            log(self.client, euler_angles)
+            log(self.client, 'Euler angles: ' + str(euler_angles))
+            # Beta is the one we're primarily interested in for balance control
             alpha, beta, gamma = euler_angles
             control = self.balance_controller.control(beta)
-            log(self.client, control)
+            log(self.client, 'Control value: ' + str(control))
             self.set_target_velocities(control, control)
+            # Calulcate the cost (abs(ref-val))
+            cost += abs(self.balance_controller.reference - beta)
             # Check for continuing
             ok = condition(lin_vel, rot_vel)
+        return cost
 
 
 if __name__ == '__main__':
