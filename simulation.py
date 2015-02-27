@@ -25,7 +25,7 @@ class SegwayTuner(object):
         self.controller.setup_body('body')
         self.controller.setup_motors('leftMotor', 'rightMotor')
 
-    def cost_function(self, parameters):
+    def single_run(self, parameters):
         """
         A function to pass for the twiddle implementation. [P, I, D] -> error
         """
@@ -33,28 +33,24 @@ class SegwayTuner(object):
         P, I, D = parameters
         balance_PID = PID(P, I, D, 0.0, 0.0)
         self.controller.setup_control(balance_PID)
-        error = self.controller.run()
-        return error
+        # Start the simulation
+        err = simxStartSimulation(self.client, simx_opmode_oneshot_wait)
+        if err > 1:
+            log(self.client, 'ERROR StartSimulation code %d' % err)
+        # Do the control
+        cost = self.controller.run()
+        # Stop the simulation (e.g. fell down, time up)
+        err = simxStopSimulation(self.client, simx_opmode_oneshot_wait)
+        if err > 1:
+            log(self.client, 'ERROR StopSimulation code %d' % err)
+        return cost
 
     def run():
         """
-        Run the simulation continuously and tune the parameters. Catch ctrl-Cs.
+        Run the simulation continuously and tune the parameters. Ctrl-Cs are
+        caught on the self.tuner.tune function. Returns the best parameters.
         """
-        try:
-            # Set initial PID
-            balance_PID = PID(5.0, 0.1, 2.0, 0.0, 0.0)
-            self.controller.setup_control(balance_PID)
-
-            self.tuner.tune()
-            # Start a simulation
-            err = simxStartSimulation(client, simx_opmode_oneshot_wait)
-            if err > 1:
-                log(client, 'ERROR StartSimulation code %d' % err)
-            self.controller.run()
-        except KeyBoardInterrupt as e:
-            # Return the best params on ctrl-c
-            # TODO dummy
-            return [-1, -1, -1]
+        return self.tuner.tune(single_run)
 
 
 ##############################################################################
