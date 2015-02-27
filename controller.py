@@ -68,7 +68,8 @@ class SegwayController(object):
         # Default condition to something sensible
         condition = condition if condition else self.body_height_condition
 
-        cost = 0
+        niterations = 0.0
+        cost = 0.0
         ok = True
         while ok:
             # OPMODE Should should be changed to stream'n'buffer
@@ -86,11 +87,17 @@ class SegwayController(object):
             control = self.balance_controller.control(beta)
             log(self.client, 'Control value: ' + str(control))
             self.set_target_velocities(control, control)
-            # Calulcate the cost (abs(ref-val))
+            # Calculcate the cost (abs(ref-val))
             cost += abs(self.balance_controller.reference - beta)
+            log(self.client, 'Cost on cycle: ' + str(cost))
+            # Keep track of spent cycles (more is better!)
+            # TODO fairly rudimentary!
+            niterations += 1.0
             # Check for continuing
             ok = condition(position)  # lin_vel, rot_vel
-        return cost
+        log(self.client, 'Cost (final): ' + str(cost))
+        log(self.client, 'Cost (final 2): ' + str(cost / niterations))
+        return cost / niterations
 
 
 if __name__ == '__main__':
