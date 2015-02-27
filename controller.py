@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+from math import sqrt
 from vrep import *
 from util import *
 from pid import PID
@@ -14,7 +15,7 @@ class SegwayController(object):
         if err:
             log(self.client, 'ERROR GetObjectHandle code %d' % err)
 
-    def setup_motors(self, left_motor_name, right_motor_name):
+    def setup_motors(self, left_motor_name="leftMotor", right_motor_name="rightMotor"):
         err_l, self.left_motor = simxGetObjectHandle(self.client, left_motor_name, simx_opmode_oneshot_wait)
         err_r, self.right_motor = simxGetObjectHandle(self.client, right_motor_name, simx_opmode_oneshot_wait)
         err = err_l or err_r
@@ -41,30 +42,38 @@ class SegwayController(object):
     def setup_control(self, balance_controller):
         self.balance_controller = balance_controller
 
-    def run(self):
-        #segway_controller.set_target_velocities(1, -1)
-        #log(client, 'Speed set to %d, %d' % (1, -1))
+    def zero_velocity_condition(self, lin_vel, rot_vel):
+        """
+        Simulation end condition. Expected to return True if the simulation
+        should continue until the next cycle and False if a halt is required.
+        """
+        # Check if velocity is near zero (could cause issues on first cycle!)
+        vel_tot = sqrt(reduce(lambda total, value: total + value**2,
+                              lin_vel,
+                              0.0))
+        log(self.client, 'Total velocity: %f' % vel_tot)
+        return vel_tot > 10.0 ** -5
+
+    def run(self, condition=None):
+        condition = condition if condition else self.zero_velocity_condition
 
         ok = True
         while ok:
             # OPMODE Should should be changed to stream'n'buffer
             err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
             err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_oneshot_wait)
-            err = err_rot or er_vel
+            err = err_rot or err_vel
             if err:
                 log(self.client, 'ERROR GetObjectOrientation/Velocity code %d' % err)
                 ok = False
-            else:
-                # Check if velocity zero (could cause issues on first cycle!)
-                vel_tot = reduce(lambda total, value: total+value, lin_vel, 0.0)
-                log(self.client, "Total velocity: %f", vel_tot)
-                if vel_tot < 0.01:
-                    ok = False
-                log(self.client, euler_angles)
-                alpha, beta, gamma = euler_angles
-                control = self.balance_controller.control(beta)
-                log(self.client, control)
-                self.set_target_velocities(control, control)
+                break
+            log(self.client, euler_angles)
+            alpha, beta, gamma = euler_angles
+            control = self.balance_controller.control(beta)
+            log(self.client, control)
+            self.set_target_velocities(control, control)
+            # Check for continuing
+            ok = condition(lin_vel, rot_vel)
 
 
 if __name__ == '__main__':
