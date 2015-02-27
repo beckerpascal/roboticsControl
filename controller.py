@@ -54,9 +54,19 @@ class SegwayController(object):
         log(self.client, 'Total velocity: %f' % vel_tot)
         return vel_tot > 10.0 ** -5
 
+    def body_height_condition(self, body_pos):
+        """
+        Simulation end condition. Expected to return True if the simulation
+        should continue until the next cycle and False if a halt is required.
+        """
+        # Check if velocity is near zero (could cause issues on first cycle!)
+        x, y, z = body_pos
+        log(self.client, 'Body centroid height: %f' % z)
+        return z > 0.04  # Wheel radius is 0.08m
+
     def run(self, condition=None):
-        # Default condition to self.zero_velocity_condition
-        condition = condition if condition else self.zero_velocity_condition
+        # Default condition to something sensible
+        condition = condition if condition else self.body_height_condition
 
         cost = 0
         ok = True
@@ -64,6 +74,7 @@ class SegwayController(object):
             # OPMODE Should should be changed to stream'n'buffer
             err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
             err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_oneshot_wait)
+            err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_oneshot_wait)
             err = err_rot or err_vel
             if err:
                 log(self.client, 'ERROR GetObjectOrientation/Velocity code %d' % err)
@@ -78,7 +89,7 @@ class SegwayController(object):
             # Calulcate the cost (abs(ref-val))
             cost += abs(self.balance_controller.reference - beta)
             # Check for continuing
-            ok = condition(lin_vel, rot_vel)
+            ok = condition(position)  # lin_vel, rot_vel
         return cost
 
 
