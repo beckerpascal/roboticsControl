@@ -18,7 +18,7 @@ class SimulationController(object):
         self.controller = controller_class(client)
         self.tuner = tuner_class()
 
-    def setup(body="body", left_motor="leftMotor", right_motor="rightMotor"):
+    def setup(self, body="body", left_motor="leftMotor", right_motor="rightMotor"):
         """
         Setup object handles and possible other V-REP related things.
         """
@@ -45,7 +45,7 @@ class SimulationController(object):
             log(self.client, 'ERROR StopSimulation code %d' % err)
         return cost
 
-    def run():
+    def run(self):
         """
         Run the simulation continuously and tune the parameters. Ctrl-Cs are
         caught on the self.tuner.tune function. Returns the best parameters.
@@ -77,6 +77,8 @@ if __name__ == '__main__':
 
         # Create a simulation controller to run the tuning
         simulation_controller = SimulationController(client)
+        # Defaults will do for the setup unless we change the model
+        simulation_controller.setup()
         best_params = simulation_controller.run()
         print str(best_params)
 
