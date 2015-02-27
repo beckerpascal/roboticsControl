@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+
 class Twiddle:
     """
     Twiddler class
     """
 
-    def __init__(self, params=[0,0,0], deltas=[1,1,1], tolerance=0.001):
+    def __init__(self, params=[0, 0, 0], deltas=[1, 1, 1], tolerance=0.001):
         self.params = params
         self.deltas = deltas
         self.tolerance = tolerance
@@ -16,7 +17,7 @@ class Twiddle:
         Calculate the tuned parameters
         """
         while self.best_error > self.tolerance:
-            for i in range(len(params)):
+            for i in range(len(self.params)):
                 self.params[i] += self.deltas[i]
                 error = error_function(self.params)
                 if error < self.error_min:
