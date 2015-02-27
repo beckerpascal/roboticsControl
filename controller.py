@@ -48,11 +48,18 @@ class SegwayController(object):
         ok = True
         while ok:
             # OPMODE Should should be changed to stream'n'buffer
-            err, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
+            err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
+            err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_oneshot_wait)
+            err = err_rot or er_vel
             if err:
-                log(self.client, 'ERROR GetObjectOrientation code %d' % err)
+                log(self.client, 'ERROR GetObjectOrientation/Velocity code %d' % err)
                 ok = False
             else:
+                # Check if velocity zero (could cause issues on first cycle!)
+                vel_tot = reduce(lambda total, value: total+value, lin_vel, 0.0)
+                log(self.client, "Total velocity: %f", vel_tot)
+                if vel_tot < 0.01:
+                    ok = False
                 log(self.client, euler_angles)
                 alpha, beta, gamma = euler_angles
                 control = self.balance_controller.control(beta)
