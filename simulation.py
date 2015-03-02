@@ -91,5 +91,5 @@ if __name__ == '__main__':
     else:
         print '-- Failed connecting to remote API server'
 
-    simxFinish(-1)
+    #simxFinish(-1) # Buggy?
     print '-- Terminating master client'
