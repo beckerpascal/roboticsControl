@@ -29,15 +29,19 @@ class SegwayController(object):
     def set_target_velocities(self, left_vel, right_vel):
         err_l = None
         err_r = None
+        # Pause comms to sync the orders
+        simxPauseCommunication(self.client, True)
         if left_vel is not None:
             err_l = simxSetJointTargetVelocity(self.client, self.left_motor,
-                                               left_vel, simx_opmode_oneshot_wait)
+                                               left_vel, simx_opmode_streaming)
         if right_vel is not None:
             err_r = simxSetJointTargetVelocity(self.client, self.right_motor,
-                                               right_vel, simx_opmode_oneshot_wait)
+                                               right_vel, simx_opmode_streaming)
         err = err_l or err_r
-        if err:  # != simx_return_ok
+        if err > 1:
             log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
+        # Re-enable comms to push the commands
+        simxPauseCommunication(self.client, False)
 
     def setup_control(self, balance_controller):
         self.balance_controller = balance_controller
@@ -67,19 +71,25 @@ class SegwayController(object):
         # Default condition to something sensible
         condition = condition if condition else self.body_height_condition
 
-        niterations = 0
+        simulation_time = 1  # ms
         cost = 0.0
         ok = True
-        while ok:
-            # OPMODE Should should be changed to stream'n'buffer
-            err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_oneshot_wait)
-            err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_oneshot_wait)
-            err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_oneshot_wait)
-            err = err_rot or err_vel
-            if err:
-                log(self.client, 'ERROR GetObjectOrientation/Velocity code %d' % err)
-                ok = False
-                break
+
+        # Setup V-REP streaming
+        simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
+        simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
+
+        while ok and simxGetConnectionId(self.client) != -1:
+            err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_buffer)
+            err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_buffer)
+            err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_buffer)
+            err = err_rot or err_vel or err_pos
+            if err > 1:
+                print "-- No data right now!"
+                continue
+            # Store the time spent until last fetche'd value
+            simulation_time = simxGetLastCmdTime(self.client)
             # log(self.client, 'Euler angles: ' + str(euler_angles))
             # Beta is the one we're primarily interested in for balance control
             alpha, beta, gamma = euler_angles
@@ -89,14 +99,11 @@ class SegwayController(object):
             # Calculcate the cost (abs(ref-val))
             cost += abs(self.balance_controller.reference - beta)
             # log(self.client, 'Cost on cycle: ' + str(cost))
-            # Keep track of spent cycles (more is better!)
-            # TODO fairly rudimentary!
-            niterations += 1
             # Check for continuing
             ok = condition(position)  # lin_vel, rot_vel
         # log(self.client, 'Cost (final): ' + str(cost))
         # log(self.client, 'Cost (final 2): ' + str(cost / niterations))
-        return (cost / niterations, niterations)
+        return (cost / simulation_time, simulation_time)
 
 
 if __name__ == '__main__':
