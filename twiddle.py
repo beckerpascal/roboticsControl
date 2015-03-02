@@ -21,7 +21,9 @@ class Twiddle:
         best_params = [-1 for p in self.params]
         # Catch ctrl-Cs here since the interesting data (best params) are here
         try:
-            while self.error_min > self.tolerance:
+            # Coordinate descent -> tolerance will be on the param deltas
+            #while self.error_min > self.tolerance:
+            while sum(map(abs, self.deltas)) > self.tolerance:
                 for i in range(len(self.params)):
                     self.params[i] += self.deltas[i]
                     error = error_function(self.params)
@@ -35,6 +37,7 @@ class Twiddle:
                         error = error_function(self.params)
                         if error < self.error_min:
                             # Was best when going the other way
+                            self.error_min = error
                             self.deltas[i] *= 1.1
                         else:
                             # Didn't get better results using previous delta.
