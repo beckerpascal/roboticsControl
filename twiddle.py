@@ -6,7 +6,7 @@ class Twiddle:
     Twiddler class
     """
 
-    def __init__(self, params=[0, 0, 0], deltas=[1, 1, 1], tolerance=0.001):
+    def __init__(self, params=[0, 0, 0], deltas=[1, 1, 1], tolerance=10**-6):
         self.params = params
         self.deltas = deltas
         self.tolerance = tolerance
