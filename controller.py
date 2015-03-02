@@ -103,7 +103,7 @@ class SegwayController(object):
             ok = condition(position)  # lin_vel, rot_vel
         # log(self.client, 'Cost (final): ' + str(cost))
         # log(self.client, 'Cost (final 2): ' + str(cost / niterations))
-        return (cost / simulation_time, simulation_time)
+        return (cost / max(simulation_time, 1), simulation_time)
 
 
 if __name__ == '__main__':
