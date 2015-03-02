@@ -40,12 +40,12 @@ class SimulationController(object):
         if err > 1:
             log(self.client, 'ERROR StartSimulation code %d' % err)
         # Do the control
-        cost = self.controller.run()
+        cost, niterations = self.controller.run()
         # Stop the simulation (e.g. fell down, time up)
         err = simxStopSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StopSimulation code %d' % err)
-        log(self.client, 'Simulation results to cost %f' % cost)
+        log(self.client, 'Simulation results to cost %f (#%d)' % (cost, niterations))
         # Wait some time to prevent V-REP lagging behind
         sleep(0.1)
         return cost

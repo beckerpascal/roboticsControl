@@ -61,14 +61,13 @@ class SegwayController(object):
         """
         # Check if velocity is near zero (could cause issues on first cycle!)
         x, y, z = body_pos
-        log(self.client, 'Body centroid height: %f' % z)
         return z > 0.04  # Wheel radius is 0.08m
 
     def run(self, condition=None):
         # Default condition to something sensible
         condition = condition if condition else self.body_height_condition
 
-        niterations = 0.0
+        niterations = 0
         cost = 0.0
         ok = True
         while ok:
@@ -81,23 +80,23 @@ class SegwayController(object):
                 log(self.client, 'ERROR GetObjectOrientation/Velocity code %d' % err)
                 ok = False
                 break
-            log(self.client, 'Euler angles: ' + str(euler_angles))
+            # log(self.client, 'Euler angles: ' + str(euler_angles))
             # Beta is the one we're primarily interested in for balance control
             alpha, beta, gamma = euler_angles
             control = self.balance_controller.control(beta)
-            log(self.client, 'Control value: ' + str(control))
+            # log(self.client, 'Control value: ' + str(control))
             self.set_target_velocities(control, control)
             # Calculcate the cost (abs(ref-val))
             cost += abs(self.balance_controller.reference - beta)
-            log(self.client, 'Cost on cycle: ' + str(cost))
+            # log(self.client, 'Cost on cycle: ' + str(cost))
             # Keep track of spent cycles (more is better!)
             # TODO fairly rudimentary!
-            niterations += 1.0
+            niterations += 1
             # Check for continuing
             ok = condition(position)  # lin_vel, rot_vel
-        log(self.client, 'Cost (final): ' + str(cost))
-        log(self.client, 'Cost (final 2): ' + str(cost / niterations))
-        return cost / niterations
+        # log(self.client, 'Cost (final): ' + str(cost))
+        # log(self.client, 'Cost (final 2): ' + str(cost / niterations))
+        return (cost / niterations, niterations)
 
 
 if __name__ == '__main__':

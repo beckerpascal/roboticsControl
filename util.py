@@ -2,10 +2,11 @@
 import sys
 from vrep import *
 
-def log(client, message_):
+def log(client, message_, send=False):
     message = '-- %s' % message_
     print message
-    msg(client, message)
+    if send:
+        msg(client, message)
 
 
 def msg(client, message):
