@@ -34,7 +34,7 @@ class SimulationController(object):
         P, I, D = parameters
         balance_PID = PID(P, I, D, 0.0, 0.0)
         self.controller.setup_control(balance_PID)
-        log(self.client, 'New simulation with (%d, %d, %d)' % (P, I, D))
+        log(self.client, 'New simulation with (%f, %f, %f)' % (P, I, D))
         # Start the simulation
         err = simxStartSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
@@ -45,7 +45,7 @@ class SimulationController(object):
         err = simxStopSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StopSimulation code %d' % err)
-        log(self.client, 'Simulation results to cost %d' % cost)
+        log(self.client, 'Simulation results to cost %f' % cost)
         # Wait some time to prevent V-REP lagging behind
         sleep(0.1)
         return cost
