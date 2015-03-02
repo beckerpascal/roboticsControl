@@ -35,7 +35,8 @@ class SimulationController(object):
         balance_PID = PID(P, I, D, 0.0, 0.0)
         self.controller.setup_control(balance_PID)
         log(self.client, 'New simulation with (%f, %f, %f)' % (P, I, D))
-        # Start the simulation
+        # Start the simulation (1st clear velocities)
+        self.controller.set_target_velocities(0.0, 0.0)
         err = simxStartSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StartSimulation code %d' % err)
