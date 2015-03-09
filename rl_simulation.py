@@ -3,8 +3,7 @@ import sys
 from time import sleep
 from vrep import *
 from util import *
-
-
+from rl_qlearning import *
 
 ##############################################################################
 # MAIN

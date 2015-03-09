@@ -1,34 +1,38 @@
 #!/usr/bin/env python
-import sys
+import random
 
-class QLearning(object):
+class QLearning():
 
-	# List of all visited states
-	states = []
+  def __init__(self, actions, epsilon=0.1, alpha=0.2, gamma=0.9):
+    self.q = {}
+    self.actions = actions
+    self.epsilon = epsilon
+    self.alpha = alpha
+    self.gamma = gamma
 
-  def __init__(self, client):
-    self.client = client
+  def getQ(self, state, action):
+    return self.q.get((state, action), 0.0)
 
-	# What needs to be done to keep object upright (accelarate/deccelarate)
-	def choose_action(_self, state):
-		
+  def learn(self, state1, action1, reward, state2):
+    maxQNew = max([self.getQ(state2, a) for a in self.actions])
+    self.learnQ(state1, action1, reward, reward + self.gamma*maxQNew)
 
-	# How good is the next state, depends on position
-	def get_reward(_self, state):
+  def learnQ(self, state, action, reward, value):
+    oldv = self.q.get((state, action), None)
+    if oldv is None:
+      self.q[(state, action)] = reward
+    else:
+      self.q[(state, action)] = oldv + self.alpha * (value - oldv)
 
+  def chooseAction(self, state):
+    q = [self.getQ(state, a) for a in self.actions]
+    maxQ = max(q)
 
-  def setup_body(self, body_name='body'):
-    err, self.body = simxGetObjectHandle(self.client, body_name, simx_opmode_oneshot_wait)
-    if err:
-      log(self.client, 'ERROR GetObjectHandle code %d' % err)
+    if random.random() > 1:
+      best = [i for i in range(len(self.actions)) if q[i] == maxQ]
+      i = random.choice(best)
+    else:
+      i = q.index(maxQ)
 
-	def setup_motors(self, left_motor_name="leftMotor", right_motor_name="rightMotor"):
-    err_l, self.left_motor = simxGetObjectHandle(self.client, left_motor_name, simx_opmode_oneshot_wait)
-    err_r, self.right_motor = simxGetObjectHandle(self.client, right_motor_name, simx_opmode_oneshot_wait)
-    err = err_l or err_r
-    if err:
-      log(self.client, 'ERROR GetObjectHandle code %d' % err)
-
-
-if __name__ == '__main__':
-    print '-- Please use rl_simulation.py instead!'
+    action = self.actions[i]
+    return action
