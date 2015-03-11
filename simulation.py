@@ -73,20 +73,25 @@ if __name__ == '__main__':
     client = simxStart(addr, port, True, True, 5000, 5)
 
     if client != -1:
-        log(client, 'Master client connected to client %d at port %d' % (client, port))
+        if len(sys.argv) == 1:
+            log(client, 'Master client connected to client %d at port %d' % (client, port))
 
-        err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
-        if err == simx_return_ok:
-            log(client, 'Number of objects in the scene: %d' % len(objs))
+            err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
+            if err == simx_return_ok:
+                log(client, 'Number of objects in the scene: %d' % len(objs))
+            else:
+                log(client, 'ERROR GetObjects code %d' % err)
+
+            # Create a simulation controller to run the tuning
+            simulation_controller = SimulationController(client)
+            # Defaults will do for the setup unless we change the model
+            simulation_controller.setup()
+            best_params = simulation_controller.run()
+            print str(best_params)
+        elif len(sys.argv) == 4:
+            print "TODO simulation with certain params"
         else:
-            log(client, 'ERROR GetObjects code %d' % err)
-
-        # Create a simulation controller to run the tuning
-        simulation_controller = SimulationController(client)
-        # Defaults will do for the setup unless we change the model
-        simulation_controller.setup()
-        best_params = simulation_controller.run()
-        print str(best_params)
+            print "ERROR - Use either no arguments or launch with params P I D"
 
     else:
         print '-- Failed connecting to remote API server'
