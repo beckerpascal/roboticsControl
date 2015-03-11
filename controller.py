@@ -46,11 +46,9 @@ class SegwayController(object):
     def setup_control(self, balance_controller):
         self.balance_controller = balance_controller
 
+#####  END CONDITIONS #########################################################
+
     def zero_velocity_condition(self, lin_vel, rot_vel):
-        """
-        Simulation end condition. Expected to return True if the simulation
-        should continue until the next cycle and False if a halt is required.
-        """
         # Check if velocity is near zero (could cause issues on first cycle!)
         vel_tot = sqrt(reduce(lambda total, value: total + value**2,
                               lin_vel,
@@ -59,17 +57,23 @@ class SegwayController(object):
         return vel_tot > 10.0 ** -5
 
     def body_height_condition(self, body_pos):
-        """
-        Simulation end condition. Expected to return True if the simulation
-        should continue until the next cycle and False if a halt is required.
-        """
-        # Check if velocity is near zero (could cause issues on first cycle!)
         x, y, z = body_pos
         return z > 0.04  # Wheel radius is 0.08m
 
+    def simulation_run_condition(self, body_pos):
+        # Check if velocity is near zero (could cause issues on first cycle!)
+        x, y, z = body_pos
+        # Wheel radius 0.08m, box length 0.1m
+        height_condition = 0.04 < z < 0.7
+        lateral_condition = abs(y) < 0.05
+        drive_condition = abs(x) < 1
+        return height_condition and lateral_condition and drive_condition
+
+##### /END CONDITIONS #########################################################
+
     def run(self, condition=None):
         # Default condition to something sensible
-        condition = condition if condition else self.body_height_condition
+        condition = condition if condition else self.simulation_run_condition
 
         simulation_time = 1  # ms
         cost = 0.0
