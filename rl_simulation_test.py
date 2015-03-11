@@ -2,7 +2,7 @@
 import sys
 from rl_qlearning import *
 
-actions = 8 # accelerate/deccelerate
+actions = 2 # accelerate/deccelerate
 lastState = None
 lastAction = None
 
