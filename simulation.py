@@ -76,32 +76,38 @@ if __name__ == '__main__':
     client = simxStart(addr, port, True, True, 5000, 5)
 
     if client != -1:
+        log(client, 'Master client connected to client %d at port %d' % (client, port))
+
+        err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
+        if err == simx_return_ok:
+            log(client, 'Number of objects in the scene: %d' % len(objs))
+        else:
+            log(client, 'ERROR GetObjects code %d' % err)
+
+        # Create a simulation controller to run the tuning
+        simulation_controller = SimulationController(client)
+        # Defaults will do for the setup unless we change the model
+        simulation_controller.setup()
+
+        # No cmd arguments - tuning run
         if len(sys.argv) == 1:
-            log(client, 'Master client connected to client %d at port %d' % (client, port))
-
-            err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
-            if err == simx_return_ok:
-                log(client, 'Number of objects in the scene: %d' % len(objs))
-            else:
-                log(client, 'ERROR GetObjects code %d' % err)
-
-            # Create a simulation controller to run the tuning
-            simulation_controller = SimulationController(client)
-            # Defaults will do for the setup unless we change the model
-            simulation_controller.setup()
             # Setup twiddle
             simulation_controller.setup_tuner(params=[10,5,5], deltas=[10,5,5])
             # Run tuner
             best_params = simulation_controller.run()
             print str(best_params)
-            # Force stop of simulation
-            print "Enter simulation stop enrage! [while(stop)]"
-            while simxStopSimulation(client, simx_opmode_oneshot_wait): pass
+
+        # 3 arguments - single run with params P I D
         elif len(sys.argv) == 4:
-            print "TODO simulation with certain params"
+            simulation_controller.single_run(map(float, [sys.argv[1], sys.argv[2], sys.argv[3]]))
+
+        # Bad number or arguments
         else:
             print "ERROR - Use either no arguments or launch with params P I D"
 
+        # Force stop of simulation under all circumstances
+        print "-- Enter simulation stop enrage! [while(stop)]"
+        while simxStopSimulation(client, simx_opmode_oneshot_wait): pass
     else:
         print '-- Failed connecting to remote API server'
 
