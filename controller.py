@@ -75,6 +75,7 @@ class SegwayController(object):
         # Default condition to something sensible
         condition = condition if condition else self.simulation_run_condition
 
+        simulation_time_tmp = -1
         simulation_time = 1  # ms
         cost = 0.0
         ok = True
@@ -90,31 +91,43 @@ class SegwayController(object):
             err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_buffer)
             err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_buffer)
             simxPauseCommunication(self.client, False)
-            
+
             err = err_rot or err_vel or err_pos
             if err > 1:
                 print "-- No data right now!"
                 continue
+
+            # Check whether new commands have been executed
+            simulation_time_tmp = simxGetLastCmdTime(self.client)
+            if simulation_time == simulation_time_tmp:
+                continue
+
             # Store the time spent until last fetch'd value
-            simulation_time = simxGetLastCmdTime(self.client)
+            simulation_time = simulation_time_tmp
             print "Sim time: ", simulation_time
             print euler_angles, lin_vel, position
             print err_rot, err_vel, err_pos
-            # log(self.client, 'Euler angles: ' + str(euler_angles))
-            # Beta is the one we're primarily interested in for balance control
+
+            # Calculate and set control. Beta is the angle we're primarily
+            # interested in for balance control
             alpha, beta, gamma = euler_angles
             control = self.balance_controller.control(beta)
-            # log(self.client, 'Control value: ' + str(control))
             self.set_target_velocities(control, control)
+
             # Calculcate the cost (abs(ref-val))
             cost += abs(self.balance_controller.reference - beta)
-            # log(self.client, 'Cost on cycle: ' + str(cost))
+
             # Check for continuing
             ok = condition(position)  # lin_vel, rot_vel
-        # log(self.client, 'Cost (final): ' + str(cost))
-        # log(self.client, 'Cost (final 2): ' + str(cost / niterations))
+
         return (cost / max(simulation_time, 1), simulation_time)
 
+
+# log(self.client, 'Euler angles: ' + str(euler_angles))
+# log(self.client, 'Control value: ' + str(control))
+# log(self.client, 'Cost on cycle: ' + str(cost))
+# log(self.client, 'Cost (final): ' + str(cost))
+# log(self.client, 'Cost (final 2): ' + str(cost / niterations))
 
 if __name__ == '__main__':
     print '-- Please use simulation.py instead!'
