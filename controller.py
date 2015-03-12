@@ -85,15 +85,21 @@ class SegwayController(object):
         simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
 
         while ok and simxGetConnectionId(self.client) != -1:
+            simxPauseCommunication(self.client, True)
             err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_buffer)
             err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_buffer)
             err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_buffer)
+            simxPauseCommunication(self.client, False)
+            
             err = err_rot or err_vel or err_pos
             if err > 1:
                 print "-- No data right now!"
                 continue
-            # Store the time spent until last fetche'd value
+            # Store the time spent until last fetch'd value
             simulation_time = simxGetLastCmdTime(self.client)
+            print "Sim time: ", simulation_time
+            print euler_angles, lin_vel, position
+            print err_rot, err_vel, err_pos
             # log(self.client, 'Euler angles: ' + str(euler_angles))
             # Beta is the one we're primarily interested in for balance control
             alpha, beta, gamma = euler_angles
