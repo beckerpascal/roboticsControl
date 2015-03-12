@@ -43,7 +43,7 @@ class SimulationController(object):
         err = simxStartSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StartSimulation code %d' % err)
-        # Do the control
+        # Do the control, returns when end condition is reached
         cost, niterations = self.controller.run()
         # Stop the simulation (e.g. fell down, time up)
         err = simxStopSimulation(self.client, simx_opmode_oneshot_wait)
@@ -63,7 +63,7 @@ class SimulationController(object):
 
 
 ##############################################################################
-# MAIN
+# MAIN 21.000000, 9.009500, 16.550000
 ##############################################################################
 if __name__ == '__main__':
     print '-- Starting master client'
@@ -90,10 +90,13 @@ if __name__ == '__main__':
             # Defaults will do for the setup unless we change the model
             simulation_controller.setup()
             # Setup twiddle
-            simulation_controller.setup_tuner(deltas=[10,5,5])
+            simulation_controller.setup_tuner(params=[10,5,5], deltas=[10,5,5])
             # Run tuner
             best_params = simulation_controller.run()
             print str(best_params)
+            # Force stop of simulation
+            print "Enter simulation stop enrage! [while(stop)]"
+            while simxStopSimulation(client, simx_opmode_oneshot_wait): pass
         elif len(sys.argv) == 4:
             print "TODO simulation with certain params"
         else:
@@ -102,5 +105,4 @@ if __name__ == '__main__':
     else:
         print '-- Failed connecting to remote API server'
 
-    #simxFinish(-1) # Buggy?
     print '-- Terminating master client'
