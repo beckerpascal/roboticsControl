@@ -104,9 +104,6 @@ class SegwayController(object):
 
             # Store the time spent until last fetch'd value
             simulation_time = simulation_time_tmp
-            print "Sim time: ", simulation_time
-            print euler_angles, lin_vel, position
-            print err_rot, err_vel, err_pos
 
             # Calculate and set control. Beta is the angle we're primarily
             # interested in for balance control
