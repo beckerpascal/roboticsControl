@@ -60,14 +60,17 @@ class SegwayController(object):
         x, y, z = body_pos
         return z > 0.04  # Wheel radius is 0.08m
 
-    def simulation_run_condition(self, body_pos):
-        # Check if velocity is near zero (could cause issues on first cycle!)
-        x, y, z = body_pos
-        # Wheel radius 0.08m, box length 0.1m
-        height_condition = 0.04 < z < 0.7
-        lateral_condition = abs(y) < 0.05
-        drive_condition = abs(x) < 1
-        return height_condition and lateral_condition and drive_condition
+    def simulation_run_condition(self, simulation_time, body_pos):
+        if simulation_time < 100:
+            return True
+        else:
+            x, y, z = body_pos
+            # Wheel radius 0.08m, box length 0.1m
+            height_condition = 0.04 < z < 0.7
+            lateral_condition = abs(y) < 0.05
+            drive_condition = abs(x) < 1
+            #print z, height_condition, lateral_condition, drive_condition
+            return height_condition and lateral_condition and drive_condition
 
 ##### /END CONDITIONS #########################################################
 
@@ -115,7 +118,7 @@ class SegwayController(object):
             cost += abs(self.balance_controller.reference - beta)
 
             # Check for continuing
-            ok = condition(position)  # lin_vel, rot_vel
+            ok = condition(simulation_time, position)  # lin_vel, rot_vel
 
         return (cost / max(simulation_time, 1), simulation_time)
 
