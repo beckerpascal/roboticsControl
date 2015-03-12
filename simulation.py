@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import argparse
 from time import sleep
 from vrep import *
 from util import *
@@ -66,8 +67,17 @@ class SimulationController(object):
 # MAIN 21.000000, 9.009500, 16.550000
 ##############################################################################
 if __name__ == '__main__':
+    # Parse args
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--one-shot", action="store_true", help="Do a single")
+    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[10, 5, 5])
+    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=[10,5,5])
+    args = parser.parse_args()
+
     print '-- Starting master client'
-    simxFinish(-1)  # just in case, close all opened connections
+
+    # Close all connection, just in case
+    simxFinish(-1)
 
     # localhost:19997 connects to V-REP global remote API
     addr = '127.0.0.1'
@@ -89,21 +99,17 @@ if __name__ == '__main__':
         # Defaults will do for the setup unless we change the model
         simulation_controller.setup()
 
-        # No cmd arguments - tuning run
-        if len(sys.argv) == 1:
+        # Tuning run
+        if not args.one_shot:
             # Setup twiddle
-            simulation_controller.setup_tuner(params=[10,5,5], deltas=[10,5,5])
+            simulation_controller.setup_tuner(params=args.params, deltas=args.deltas)
             # Run tuner
             best_params = simulation_controller.run()
             print str(best_params)
 
-        # 3 arguments - single run with params P I D
-        elif len(sys.argv) == 4:
-            simulation_controller.single_run(map(float, [sys.argv[1], sys.argv[2], sys.argv[3]]))
-
-        # Bad number or arguments
+        # One shot
         else:
-            print "ERROR - Use either no arguments or launch with params P I D"
+            simulation_controller.single_run(map(float, args.params))  # [sys.argv[1], sys.argv[2], sys.argv[3]]
 
         # Force stop of simulation under all circumstances
         print "-- Enter simulation stop enrage! [while(stop)]"
