@@ -12,6 +12,11 @@ class Twiddle:
         self.tolerance = tolerance
         self.error_min = float("inf")
 
+    def setup(self, **kwargs):
+        self.params = kwargs.get("params", self.params)
+        self.deltas = kwargs.get("deltas", self.deltas)
+        self.tolerance = kwargs.get("tolerance", self.tolerance)
+
     def tune(self, error_function):
         """
         Calculate the tuned parameters

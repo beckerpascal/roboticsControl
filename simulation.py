@@ -26,6 +26,9 @@ class SimulationController(object):
         self.controller.setup_body('body')
         self.controller.setup_motors('leftMotor', 'rightMotor')
 
+    def setup_tuner(self, **kwargs):
+        self.tuner.setup(**kwargs)
+
     def single_run(self, parameters):
         """
         A function to pass for the twiddle implementation. [P, I, D] -> error
@@ -86,6 +89,9 @@ if __name__ == '__main__':
             simulation_controller = SimulationController(client)
             # Defaults will do for the setup unless we change the model
             simulation_controller.setup()
+            # Setup twiddle
+            simulation_controller.setup_tuner(deltas=[10,5,5])
+            # Run tuner
             best_params = simulation_controller.run()
             print str(best_params)
         elif len(sys.argv) == 4:
