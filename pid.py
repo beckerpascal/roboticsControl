@@ -15,15 +15,15 @@ class PID:
         self.accumulated_error = 0.0
         self.anti_windup = False
 
-    def control(self, input, reference=None):
+    def control(self, input, dt=1, reference=None):
         """
         Compute a control value for @input. If no @reference is used, fall
-        back to self.reference.
+        back to self.reference. If no @dt is provided, fall back to discrete 1.
         """
         # Calculate new error and accumulate
         error = (self.reference if reference is None else reference) - input
-        self.accumulated_error += error
-        error_diff = error - self.previous_error
+        self.accumulated_error += error * dt
+        error_diff = (error - self.previous_error) / dt
         # Check for accumulator limits
         if (self.anti_windup):
             if self.accumulated_error < self.accumulator_min:
