@@ -71,8 +71,8 @@ if __name__ == '__main__':
     # Parse args
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--one-shot", action="store_true", help="Do a single")
-    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[2, 1, 1])
-    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=[2, 1, 1])
+    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[0.5, 0.25, 0.25])
+    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=[0.5, 0.25, 0.25])
     args = parser.parse_args()
 
     print '-- Starting master client'
@@ -105,8 +105,10 @@ if __name__ == '__main__':
             # Setup twiddle
             simulation_controller.setup_tuner(params=args.params, deltas=args.deltas)
             # Run tuner
-            best_params = simulation_controller.run()
-            print str(best_params)
+            best_params, best_cost = simulation_controller.run()
+            print "--- RESULTS ---"
+            print "Best params (cost):"
+            print str(best_params) + " (" + str(best_cost) + ")"
 
         # One shot
         else:
