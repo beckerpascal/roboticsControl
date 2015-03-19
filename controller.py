@@ -108,14 +108,15 @@ class SegwayController(object):
             # Store the time spent until last fetch'd value
             simulation_time = simulation_time_tmp
 
-            # Calculate and set control. Beta is the angle we're primarily
+            # Calculate and set control. Pitch is the angle we're primarily
             # interested in for balance control
-            alpha, beta, gamma = euler_angles
-            control = self.balance_controller.control(beta)
+            roll, pitch, yaw = euler_angles
+            droll, dpitch, dyaw = rot_vel
+            control = self.balance_controller.control(pitch)
             self.set_target_velocities(control, control)
 
             # Calculcate the cost (abs(ref-val))
-            cost += abs(self.balance_controller.reference - beta)
+            cost += abs(self.balance_controller.reference - pitch)
 
             # Check for continuing
             ok = condition(simulation_time, position)  # lin_vel, rot_vel
