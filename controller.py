@@ -78,8 +78,8 @@ class SegwayController(object):
         # Default condition to something sensible
         condition = condition if condition else self.simulation_run_condition
 
-        simulation_time_tmp = -1
-        simulation_time = 1  # ms
+        simulation_time_current = 0
+        simulation_time_previous = 0  # ms
         cost = 0.0
         ok = True
 
@@ -101,13 +101,13 @@ class SegwayController(object):
                 continue
 
             # Check whether new commands have been executed
-            simulation_time_tmp = simxGetLastCmdTime(self.client)
-            if simulation_time == simulation_time_tmp:
+            simulation_time_current = simxGetLastCmdTime(self.client)
+            if simulation_time_previous == simulation_time_current:
                 continue
             # Calculate dt now that we have times available
-            dt = simulation_time_tmp - simulation_time
+            dt = simulation_time_current - simulation_time_previous
             # Store the time spent until last fetch'd value
-            simulation_time = simulation_time_tmp
+            simulation_time_previous = simulation_time_current
 
             # Calculate and set control. Pitch is the angle we're primarily
             # interested in for balance control
@@ -120,9 +120,9 @@ class SegwayController(object):
             cost += abs(self.balance_controller.reference - pitch)
 
             # Check for continuing
-            ok = condition(simulation_time, position)  # lin_vel, rot_vel
+            ok = condition(simulation_time_current, position)  # lin_vel, rot_vel
 
-        return (cost / max(simulation_time, 1), simulation_time)
+        return (cost / max(simulation_time_current, 1), simulation_time_current)
 
 
 # log(self.client, 'Euler angles: ' + str(euler_angles))
