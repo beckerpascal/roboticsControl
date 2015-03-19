@@ -84,6 +84,9 @@ class SegwayController(object):
         ok = True
 
         # Setup V-REP streaming
+        simxGetFloatSignal(self.client, 'gyroX', simx_opmode_streaming)
+        simxGetFloatSignal(self.client, 'gyroY', simx_opmode_streaming)
+        simxGetFloatSignal(self.client, 'gyroZ', simx_opmode_streaming)
         simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
         simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
         simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
@@ -93,9 +96,12 @@ class SegwayController(object):
             err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_buffer)
             err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_buffer)
             err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_buffer)
+            err_droll, droll = simxGetFloatSignal(self.client, 'gyroX', simx_opmode_buffer)
+            err_dpitch, dpitch = simxGetFloatSignal(self.client, 'gyroY', simx_opmode_buffer)
+            err_dyaw, dyaw = simxGetFloatSignal(self.client, 'gyroZ', simx_opmode_buffer)
             simxPauseCommunication(self.client, False)
 
-            err = err_rot or err_vel or err_pos
+            err = err_rot or err_vel or err_pos or err_droll or err_dpitch or err_dyaw
             if err > 1:
                 print "-- No data right now!"
                 continue
