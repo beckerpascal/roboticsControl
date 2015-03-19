@@ -104,7 +104,8 @@ class SegwayController(object):
             simulation_time_tmp = simxGetLastCmdTime(self.client)
             if simulation_time == simulation_time_tmp:
                 continue
-
+            # Calculate dt now that we have times available
+            dt = simulation_time_tmp - simulation_time
             # Store the time spent until last fetch'd value
             simulation_time = simulation_time_tmp
 
@@ -112,7 +113,7 @@ class SegwayController(object):
             # interested in for balance control
             roll, pitch, yaw = euler_angles
             droll, dpitch, dyaw = rot_vel
-            control = self.balance_controller.control(pitch)
+            control = self.balance_controller.control(dpitch, dt)
             self.set_target_velocities(control, control)
 
             # Calculcate the cost (abs(ref-val))
