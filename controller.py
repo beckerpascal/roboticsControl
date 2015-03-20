@@ -5,10 +5,18 @@ from vrep import *
 from util import *
 from pid import PID
 
+M_PI = 3.14159265359    
+
 class SegwayController(object):
 
     def __init__(self, client):
         self.client = client
+        self.current_position = 0
+
+    def setup(self, body_name="body", left_motor_name="leftMotor", right_motor_name="rightMotor"):
+        self.setup_body(body_name)
+        self.setup_motors(left_motor_name, right_motor_name)
+        self.setup_streaming()
 
     def setup_body(self, body_name='body'):
         err, self.body = simxGetObjectHandle(self.client, body_name, simx_opmode_oneshot_wait)
@@ -25,6 +33,12 @@ class SegwayController(object):
     def setup_sensors(self, gyro, height):
         # Placeholder
         pass
+
+    def setup_streaming(self):
+        # Setup V-REP streaming
+        simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
+        simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
 
     def set_target_velocities(self, left_vel, right_vel):
         err_l = None
@@ -67,6 +81,28 @@ class SegwayController(object):
         x, y, z = body_pos
         return z > 0.04  # Wheel radius is 0.08m
 
+    def get_angle_degree(self, rpy):
+        err_or, angle = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
+        if err_or > 0:
+            print "Error while getting angle"
+        # Returns angle (RPY)
+        return angle[rpy] * 180 / M_PI
+
+    def get_current_position(self, xyz, part_name="body"):
+        err_pos, pos = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
+        if err_pos > 0:
+            print "Error while getting position"
+        print pos
+        return pos
+
+    def get_current_ground_speed(self, part_name="body"):
+        # TODO
+        return 0
+
+    def get_current_angle_speed(self, part_name="rightMotor"):
+        # TODO
+        return 0
+
     def run(self, condition=None):
         # Default condition to something sensible
         condition = condition if condition else self.body_height_condition
@@ -75,10 +111,7 @@ class SegwayController(object):
         cost = 0.0
         ok = True
 
-        # Setup V-REP streaming
-        simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
-        simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
-        simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
+        self.setup_streaming()
 
         while ok and simxGetConnectionId(self.client) != -1:
             err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_buffer)
