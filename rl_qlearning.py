@@ -11,13 +11,14 @@ class QLearning():
     self.gamma = gamma
 
   def getQ(self, state, action):
+    reward = -1
     if state <= 0 and action == 1:
-      reward = 1
+      f = 1
     elif state >= 0 and action == 0:
       reward = 1
     else:
       reward = 0
-    print 'getQ: state: ' + str(state) + ' action: ' + str(action) + ' Q: ' + str(self.q.get((state, action), reward))
+    #print 'getQ: state: ' + str(state) + ' action: ' + str(action) + ' Q: ' + str(self.q.get((state, action), reward))
     return self.q.get((state, action), reward)
 
   def learn(self, state1, action1, reward, state2):

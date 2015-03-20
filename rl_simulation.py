@@ -4,11 +4,13 @@ from time import sleep
 from vrep import *
 from util import *
 from rl_qlearning import *
+from controller import *
 
 actions = 2 # accelerate/deccelerate
 lastState = None
 lastAction = None
-M_PI = 3.14159265359    
+max_angle = 15
+
 
 def set_target_velocities(self, left_vel, right_vel):
     err_l = None
@@ -44,57 +46,30 @@ if __name__ == '__main__':
     print '-- Connecting to %s:%d' % (addr, port)
     client = simxStart(addr, port, True, True, 5000, 5)
 
-
-
     if client != -1:
         log(client, 'Master client connected to client %d at port %d' % (client, port))
 
-        #setupBody
-        err, body = simxGetObjectHandle(client, "body", simx_opmode_oneshot_wait)
-        if err:
-            log(client, 'ERROR GetObjectHandle code %d' % err)
-
-        #setupMotors
-        err_l, left_motor = simxGetObjectHandle(client, "leftMotor", simx_opmode_oneshot_wait)
-        err_r, right_motor = simxGetObjectHandle(client, "rightMotor", simx_opmode_oneshot_wait)
-        err = err_l or err_r
-        if err:
-            log(client, 'ERROR GetObjectHandle code %d' % err)
-
-        # Setup V-REP streaming
-        simxGetObjectOrientation(client, body, -1, simx_opmode_streaming)
-        simxGetObjectVelocity(client, body, simx_opmode_streaming)
-        simxGetObjectPosition(client, body, -1, simx_opmode_streaming)
+        controller = SegwayController(client)
+        controller.setup("body", "leftMotor", "rightMotor")
 
         roundCounter = 0        
         while roundCounter < 10:
             roundCounter += 1
-            err = simxStartSimulation(client, simx_opmode_oneshot_wait)
+            err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
   
-            simxPauseCommunication(client, True)
-
-            err_l = simxSetJointTargetVelocity(client, left_motor,
-                                                   0, simx_opmode_streaming)
-            err_r = simxSetJointTargetVelocity(client, right_motor,
-                                                   0, simx_opmode_streaming)
-            err = err_l or err_r
-            print str(err_l) + ' ' + str(err_r)
-            if err > 1:
-                print 'ERROR SetJointTargetVelocity code ' + str(err) 
-            simxPauseCommunication(client, False)
+            controller.set_target_velocities(0, 0)
 
             state = 0
             stopCounter = 0
 
             while True:
-                if 70 < abs(state):
+                if max_angle < abs(state):
                     stopCounter = stopCounter + 1
                 if stopCounter > 5:
                     print 'BREAK ========================'
                     break
 
-                err_or, reward = simxGetObjectOrientation(client,body,-1,simx_opmode_oneshot_wait)
-                state = round(reward[1]*180/M_PI, 0)
+                state = round(controller.get_angle_degree(1), 0)
                 print str(int(state)) + ' degrees'
                 reward = (80 - abs(state))/80
                 if lastState is not None:
@@ -105,23 +80,18 @@ if __name__ == '__main__':
                 action = ai.chooseAction(state)
                 print 'Reward: ' + str(reward)
                 print 'Action: ' + str(action)
-                vel = 3
+                vel = 10
                 if action == 0:
-                    err_l = simxSetJointTargetVelocity(client, left_motor,
-                                                   -vel, simx_opmode_streaming)
-                    err_r = simxSetJointTargetVelocity(client, right_motor,
-                                                   -vel, simx_opmode_streaming)
+                    controller.set_target_velocities(-vel, -vel)
                 else:
-                    err_l = simxSetJointTargetVelocity(client, left_motor,
-                                                   -vel, simx_opmode_streaming)
-                    err_r = simxSetJointTargetVelocity(client, right_motor,
-                                                   -vel, simx_opmode_streaming)  
+                    controller.set_target_velocities(vel, vel)
+
                 lastState = state
                 lastAction = action 
 
             # print 'i: ' + str(i) + ' lastState: ' + str(lastState) + ' lastAction: ' + str(lastAction)
 
-            err = simxStopSimulation(client, simx_opmode_oneshot_wait)
+            err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)
             print ai.q
 
         # # Create a simulation controller to run the tuning
