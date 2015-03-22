@@ -88,7 +88,7 @@ class SegwayController(object):
         # Returns angle (RPY)
         return angle[rpy] * 180 / M_PI
 
-    def get_current_position(self, xyz, part_name="body"):
+    def get_current_position(self):
         err_pos, pos = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
         if err_pos > 0:
             print "Error while getting position"
