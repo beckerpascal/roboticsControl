@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-from math import sqrt
+from math import sqrt, pi
 from vrep import *
 from util import *
 from pid import PID
@@ -113,11 +113,14 @@ class SegwayController(object):
             # interested in for balance control
             roll, pitch, yaw = euler_angles
             droll, dpitch, dyaw = rot_vel
+            vx, vy, vz = lin_vel
+            x, y, z = position
             control = self.balance_controller.control(pitch, dt)
             self.set_target_velocities(control, control)
+            e = self.balance_controller.reference - pitch
 
             # Calculcate the cost (abs(ref-val))
-            cost += abs(self.balance_controller.reference - pitch)
+            cost += e**2 + ((pi/2)*x)**2  # pi/2 # + vy**2
 
             # Check for continuing
             ok = condition(simulation_time_current, position)  # lin_vel, rot_vel
