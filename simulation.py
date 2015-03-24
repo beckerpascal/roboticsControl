@@ -64,15 +64,21 @@ class SimulationController(object):
 
 
 ##############################################################################
-# MAIN 50ms: 21.000000 9.009500 16.550000
-#      10ms: 79.0 19.9 41.4
+# MAIN | SOME GOOD PID TUNES BELLOW
+# pitch:
+# 50ms - 13.7 0.199 1286
+# dpitch:
+# ?
+# OLDIES BUT GOLDIES:
+# 50ms: 21.000000 9.009500 16.550000
+# 10ms: 79.0 19.9 41.4
 ##############################################################################
 if __name__ == '__main__':
     # Parse args
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--one-shot", action="store_true", help="Do a single")
     parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[0.5, 0.25, 0.25])
-    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=[0.5, 0.25, 0.25])
+    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=None)
     args = parser.parse_args()
 
     print '-- Starting master client'
@@ -103,7 +109,8 @@ if __name__ == '__main__':
         # Tuning run
         if not args.one_shot:
             # Setup twiddle
-            simulation_controller.setup_tuner(params=args.params, deltas=args.deltas)
+            deltas = args.deltas if args.deltas else args.params[:]
+            simulation_controller.setup_tuner(params=args.params, deltas=deltas)
             # Run tuner
             best_params, best_cost = simulation_controller.run()
             print "--- RESULTS ---"
