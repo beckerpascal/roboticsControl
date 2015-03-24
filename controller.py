@@ -113,7 +113,7 @@ class SegwayController(object):
             # interested in for balance control
             roll, pitch, yaw = euler_angles
             droll, dpitch, dyaw = rot_vel
-            control = self.balance_controller.control(dpitch, dt)
+            control = self.balance_controller.control(pitch, dt)
             self.set_target_velocities(control, control)
 
             # Calculcate the cost (abs(ref-val))

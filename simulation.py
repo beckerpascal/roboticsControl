@@ -67,8 +67,9 @@ class SimulationController(object):
 # MAIN | SOME GOOD PID TUNES BELLOW
 # pitch:
 # 50ms - 13.7 0.199 1286
+# 10ms - 56.25, 2.736, 1389
 # dpitch:
-# ?
+# - 0.5, 0.005, 12.5
 # OLDIES BUT GOLDIES:
 # 50ms: 21.000000 9.009500 16.550000
 # 10ms: 79.0 19.9 41.4
@@ -77,7 +78,7 @@ if __name__ == '__main__':
     # Parse args
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--one-shot", action="store_true", help="Do a single")
-    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[0.5, 0.25, 0.25])
+    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[13.7, 0.199, 1286])
     parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=None)
     args = parser.parse_args()
 
