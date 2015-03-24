@@ -95,11 +95,8 @@ if __name__ == '__main__':
     if client != -1:
         log(client, 'Master client connected to client %d at port %d' % (client, port))
 
-        err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
-        if err == simx_return_ok:
-            log(client, 'Number of objects in the scene: %d' % len(objs))
-        else:
-            log(client, 'ERROR GetObjects code %d' % err)
+        print '-- Halt pending simulations'
+        simxStopSimulation(client, simx_opmode_oneshot_wait)
 
         # Create a simulation controller to run the tuning
         simulation_controller = SimulationController(client)
@@ -109,7 +106,7 @@ if __name__ == '__main__':
         # Tuning run
         if not args.one_shot:
             # Setup twiddle
-            deltas = args.deltas if args.deltas else args.params[:]
+            deltas = args.deltas if args.deltas else map(lambda x: 0.8*x, args.params[:])
             simulation_controller.setup_tuner(params=args.params, deltas=deltas)
             # Run tuner
             best_params, best_cost = simulation_controller.run()
@@ -122,8 +119,8 @@ if __name__ == '__main__':
             simulation_controller.single_run(map(float, args.params))  # [sys.argv[1], sys.argv[2], sys.argv[3]]
 
         # Force stop of simulation under all circumstances
-        print "-- Enter simulation stop enrage! [while(stop)]"
-        while simxStopSimulation(client, simx_opmode_oneshot_wait): pass
+        print "-- Try to stop simulation (it is difficult!)"
+        simxStopSimulation(client, simx_opmode_oneshot_wait)
     else:
         print '-- Failed connecting to remote API server'
 
