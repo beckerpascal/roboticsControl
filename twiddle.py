@@ -20,12 +20,11 @@ class Twiddle:
         """
         Calculate the tuned parameters
         """
-        # Initialize a buffered vector for the best parameters found for
-        # cleaner keyboard interrupt handling
-        best_params = [-1 for p in self.params]
-        error_min = float("inf")
         # Catch ctrl-Cs here since the interesting data (best params) are here
         try:
+            # Initialize a buffered vector for the best parameters found for
+            # cleaner keyboard interrupt handling
+            best_params = self.params[:]
             # Initial run
             error_min = error_function(self.params)
             # Coordinate descent -> tolerance will be on the param deltas
