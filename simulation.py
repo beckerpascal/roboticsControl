@@ -75,6 +75,8 @@ class SimulationController(object):
 # a**2 + x**2
 # 50ms - 36.72, 0.5333, 2036 (bad)
 # 10ms - ?
+# a**2 + x**2 / t**2
+# 10ms - 26.11, 1.971, 2925
 # dpitch:
 # - 0.5, 0.005, 12.5
 # OLDIES BUT GOLDIES:
