@@ -21,27 +21,32 @@ class SegwayController(object):
         err = err_l or err_r
         if err:
             log(self.client, 'ERROR GetObjectHandle code %d' % err)
+        self._send_target_velocities(0.0, 0.0, simx_opmode_oneshot_wait)
 
     def setup_sensors(self, gyro, height):
         # Placeholder
         pass
 
     def set_target_velocities(self, left_vel, right_vel):
-        err_l = None
-        err_r = None
         # Pause comms to sync the orders
         simxPauseCommunication(self.client, True)
+        self._send_target_velocities(left_vel, right_vel, simx_opmode_streaming)
+        # Re-enable comms to push the commands
+        simxPauseCommunication(self.client, False)
+
+    def _send_target_velocities(self, left_vel, right_vel, opmode):
+        err_l = None
+        err_r = None
         if left_vel is not None:
             err_l = simxSetJointTargetVelocity(self.client, self.left_motor,
-                                               left_vel, simx_opmode_streaming)
+                                               left_vel, opmode)
         if right_vel is not None:
             err_r = simxSetJointTargetVelocity(self.client, self.right_motor,
-                                               right_vel, simx_opmode_streaming)
+                                               right_vel, opmode)
         err = err_l or err_r
         if err > 1:
             log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
-        # Re-enable comms to push the commands
-        simxPauseCommunication(self.client, False)
+
 
     def setup_control(self, balance_controller):
         self.balance_controller = balance_controller
