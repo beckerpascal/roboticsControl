@@ -39,21 +39,19 @@ class SimulationController(object):
         balance_PID = PID(P, I, D, 0.0, 0.0)
         self.controller.setup_control(balance_PID)
         log(self.client, 'New simulation with (%f, %f, %f)' % (P, I, D))
-        # Start the simulation (1st clear velocities)
-        self.controller.set_target_velocities(0.0, 0.0)
         err = simxStartSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StartSimulation code %d' % err)
         # Do the control, returns when end condition is reached
-        cost, niterations = self.controller.run()
+        cost, simulation_time = self.controller.run()
         # Stop the simulation (e.g. fell down, time up)
         err = simxStopSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StopSimulation code %d' % err)
-        log(self.client, 'Simulation results to cost %f (#%d)' % (cost, niterations))
+        log(self.client, 'Simulation results to cost %f (#%d)' % (cost, simulation_time))
         # Wait some time to prevent V-REP lagging behind
         sleep(0.1)
-        return cost
+        return cost, simulation_time
 
     def run(self):
         """
@@ -119,10 +117,10 @@ if __name__ == '__main__':
             deltas = args.deltas if args.deltas else map(lambda x: 0.8*x, args.params[:])
             simulation_controller.setup_tuner(params=args.params, deltas=deltas)
             # Run tuner
-            best_params, best_cost = simulation_controller.run()
+            best_params, best_cost, best_cost_time = simulation_controller.run()
             print "--- RESULTS ---"
-            print "Best params (cost):"
-            print str(best_params) + " (" + str(best_cost) + ")"
+            print "Best params (cost) #ms:"
+            print str(best_params) + " (" + str(best_cost) + ") #" + str(best_cost_time)
 
         # One shot
         else:
