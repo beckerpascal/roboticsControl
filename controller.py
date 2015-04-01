@@ -72,7 +72,7 @@ class SegwayController(object):
             x, y, z = body_pos
             # Wheel radius 0.25m, box length 1.5m -> pos @1m
             height_condition = 0.3 < z < 1.1
-            drive_condition = sqrt(x**2 + y**2) < 2.5
+            drive_condition = sqrt(x**2 + y**2) < 2.0
             #print z, height_condition, lateral_condition, drive_condition
             return height_condition and drive_condition
 
