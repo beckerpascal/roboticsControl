@@ -20,12 +20,12 @@ class SimulationController(object):
         self.controller = controller_class(client)
         self.tuner = tuner_class()
 
-    def setup(self, body="body", left_motor="leftMotor", right_motor="rightMotor"):
+    def setup(self, body="Payload", left_motor="MotorLeft", right_motor="MotorRight"):
         """
         Setup object handles and possible other V-REP related things.
         """
-        self.controller.setup_body('body')
-        self.controller.setup_motors('leftMotor', 'rightMotor')
+        self.controller.setup_body(body)
+        self.controller.setup_motors(left_motor, right_motor)
 
     def setup_tuner(self, **kwargs):
         self.tuner.setup(**kwargs)

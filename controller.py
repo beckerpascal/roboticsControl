@@ -10,12 +10,12 @@ class SegwayController(object):
     def __init__(self, client):
         self.client = client
 
-    def setup_body(self, body_name='body'):
+    def setup_body(self, body_name):
         err, self.body = simxGetObjectHandle(self.client, body_name, simx_opmode_oneshot_wait)
         if err:
             log(self.client, 'ERROR GetObjectHandle code %d' % err)
 
-    def setup_motors(self, left_motor_name="leftMotor", right_motor_name="rightMotor"):
+    def setup_motors(self, left_motor_name, right_motor_name):
         err_l, self.left_motor = simxGetObjectHandle(self.client, left_motor_name, simx_opmode_oneshot_wait)
         err_r, self.right_motor = simxGetObjectHandle(self.client, right_motor_name, simx_opmode_oneshot_wait)
         err = err_l or err_r
@@ -70,12 +70,11 @@ class SegwayController(object):
             return True
         else:
             x, y, z = body_pos
-            # Wheel radius 0.08m, box length 0.1m
-            height_condition = 0.04 < z < 0.7
-            lateral_condition = abs(y) < 0.05
-            drive_condition = abs(x) < 1
+            # Wheel radius 0.25m, box length 1.5m -> pos @1m
+            height_condition = 0.3 < z < 1.1
+            drive_condition = sqrt(x**2 + y**2) < 2.5
             #print z, height_condition, lateral_condition, drive_condition
-            return height_condition and lateral_condition and drive_condition
+            return height_condition and drive_condition
 
 ##### /END CONDITIONS #########################################################
 
