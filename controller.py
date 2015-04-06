@@ -127,7 +127,7 @@ class SegwayController(object):
             # Check for continuing
             ok = condition(simulation_time_current, position)
 
-        return (log10(cost / max(simulation_time_current, 1)), simulation_time_current)
+        return (log10(cost / max(simulation_time_current, 1)**2), simulation_time_current)
 
 
 # log(self.client, 'Euler angles: ' + str(euler_angles))
