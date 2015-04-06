@@ -70,11 +70,11 @@ class SegwayController(object):
             return True
         else:
             x, y, z = body_pos
-            # Wheel radius 0.25m, box length 1.5m -> pos @1m
+            # Wheel radius 0.25m, box length 1.5m -> pos @1m, time in ms
             height_condition = 0.3 < z < 1.1
             drive_condition = sqrt(x**2 + y**2) < 2.0
-            #print z, height_condition, lateral_condition, drive_condition
-            return height_condition and drive_condition
+            time_condition = simulation_time < 30000
+            return height_condition and drive_condition and time_condition
 
 ##### /END CONDITIONS #########################################################
 
@@ -122,12 +122,12 @@ class SegwayController(object):
             self.set_target_velocities(control, control)
 
             # Calculcate the current cost and sum it to the total
-            cost += tilt_from_rp(roll, pitch)**2 + ((pi/2)*x)**2
+            cost += abs(tilt_from_rp(roll, pitch)) + abs((pi/2)*x)
 
             # Check for continuing
             ok = condition(simulation_time_current, position)
 
-        return (log10(cost / max(simulation_time_current, 1)**2), simulation_time_current)
+        return (log10(cost / max(simulation_time_current, 1)), simulation_time_current)
 
 
 # log(self.client, 'Euler angles: ' + str(euler_angles))
