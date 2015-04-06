@@ -20,12 +20,12 @@ class SimulationController(object):
         self.controller = controller_class(client)
         self.tuner = tuner_class()
 
-    def setup(self, body="body", left_motor="leftMotor", right_motor="rightMotor"):
+    def setup(self, body="Payload", left_motor="MotorLeft", right_motor="MotorRight"):
         """
         Setup object handles and possible other V-REP related things.
         """
-        self.controller.setup_body('body')
-        self.controller.setup_motors('leftMotor', 'rightMotor')
+        self.controller.setup_body(body)
+        self.controller.setup_motors(left_motor, right_motor)
 
     def setup_tuner(self, **kwargs):
         self.tuner.setup(**kwargs)
@@ -39,21 +39,19 @@ class SimulationController(object):
         balance_PID = PID(P, I, D, 0.0, 0.0)
         self.controller.setup_control(balance_PID)
         log(self.client, 'New simulation with (%f, %f, %f)' % (P, I, D))
-        # Start the simulation (1st clear velocities)
-        self.controller.set_target_velocities(0.0, 0.0)
         err = simxStartSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StartSimulation code %d' % err)
         # Do the control, returns when end condition is reached
-        cost, niterations = self.controller.run()
+        cost, simulation_time = self.controller.run()
         # Stop the simulation (e.g. fell down, time up)
         err = simxStopSimulation(self.client, simx_opmode_oneshot_wait)
         if err > 1:
             log(self.client, 'ERROR StopSimulation code %d' % err)
-        log(self.client, 'Simulation results to cost %f (#%d)' % (cost, niterations))
+        log(self.client, 'Simulation results to cost %f (#%d)' % (cost, simulation_time))
         # Wait some time to prevent V-REP lagging behind
         sleep(0.1)
-        return cost
+        return cost, simulation_time
 
     def run(self):
         """
@@ -64,15 +62,14 @@ class SimulationController(object):
 
 
 ##############################################################################
-# MAIN 50ms: 21.000000 9.009500 16.550000
-#      10ms: 79.0 19.9 41.4
+# MAIN
 ##############################################################################
 if __name__ == '__main__':
     # Parse args
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--one-shot", action="store_true", help="Do a single")
-    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[10, 5, 5])
-    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=[10,5,5])
+    parser.add_argument("-p", "--params", nargs=3, type=float, metavar="P", help="PID gains in a list: [KP, KI, KD]", default=[13.7, 0.199, 1286])
+    parser.add_argument("-d", "--deltas", nargs=3, type=float, metavar="dP", help="Twiddle PID gain deltas in a list: [dKP, dKI, dKD]", default=None)
     args = parser.parse_args()
 
     print '-- Starting master client'
@@ -89,11 +86,8 @@ if __name__ == '__main__':
     if client != -1:
         log(client, 'Master client connected to client %d at port %d' % (client, port))
 
-        err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
-        if err == simx_return_ok:
-            log(client, 'Number of objects in the scene: %d' % len(objs))
-        else:
-            log(client, 'ERROR GetObjects code %d' % err)
+        print '-- Halt pending simulations'
+        simxStopSimulation(client, simx_opmode_oneshot_wait)
 
         # Create a simulation controller to run the tuning
         simulation_controller = SimulationController(client)
@@ -103,18 +97,21 @@ if __name__ == '__main__':
         # Tuning run
         if not args.one_shot:
             # Setup twiddle
-            simulation_controller.setup_tuner(params=args.params, deltas=args.deltas)
+            deltas = args.deltas if args.deltas else map(lambda x: 0.8*x, args.params[:])
+            simulation_controller.setup_tuner(params=args.params, deltas=deltas)
             # Run tuner
-            best_params = simulation_controller.run()
-            print str(best_params)
+            best_params, best_cost, best_cost_time = simulation_controller.run()
+            print "--- RESULTS ---"
+            print "Best params (cost) #ms:"
+            print str(best_params) + " (" + str(best_cost) + ") #" + str(best_cost_time)
 
         # One shot
         else:
             simulation_controller.single_run(map(float, args.params))  # [sys.argv[1], sys.argv[2], sys.argv[3]]
 
         # Force stop of simulation under all circumstances
-        print "-- Enter simulation stop enrage! [while(stop)]"
-        while simxStopSimulation(client, simx_opmode_oneshot_wait): pass
+        print "-- Try to stop simulation (it is difficult!)"
+        simxStopSimulation(client, simx_opmode_oneshot_wait)
     else:
         print '-- Failed connecting to remote API server'
 

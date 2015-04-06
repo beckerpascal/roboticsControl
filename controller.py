@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-from math import sqrt
+from math import sqrt, log10, pi
 from vrep import *
 from util import *
 from pid import PID
@@ -10,38 +10,43 @@ class SegwayController(object):
     def __init__(self, client):
         self.client = client
 
-    def setup_body(self, body_name='body'):
+    def setup_body(self, body_name):
         err, self.body = simxGetObjectHandle(self.client, body_name, simx_opmode_oneshot_wait)
         if err:
             log(self.client, 'ERROR GetObjectHandle code %d' % err)
 
-    def setup_motors(self, left_motor_name="leftMotor", right_motor_name="rightMotor"):
+    def setup_motors(self, left_motor_name, right_motor_name):
         err_l, self.left_motor = simxGetObjectHandle(self.client, left_motor_name, simx_opmode_oneshot_wait)
         err_r, self.right_motor = simxGetObjectHandle(self.client, right_motor_name, simx_opmode_oneshot_wait)
         err = err_l or err_r
         if err:
             log(self.client, 'ERROR GetObjectHandle code %d' % err)
+        self._send_target_velocities(0.0, 0.0, simx_opmode_oneshot_wait)
 
     def setup_sensors(self, gyro, height):
         # Placeholder
         pass
 
     def set_target_velocities(self, left_vel, right_vel):
-        err_l = None
-        err_r = None
         # Pause comms to sync the orders
         simxPauseCommunication(self.client, True)
+        self._send_target_velocities(left_vel, right_vel, simx_opmode_streaming)
+        # Re-enable comms to push the commands
+        simxPauseCommunication(self.client, False)
+
+    def _send_target_velocities(self, left_vel, right_vel, opmode):
+        err_l = None
+        err_r = None
         if left_vel is not None:
             err_l = simxSetJointTargetVelocity(self.client, self.left_motor,
-                                               left_vel, simx_opmode_streaming)
+                                               left_vel, opmode)
         if right_vel is not None:
             err_r = simxSetJointTargetVelocity(self.client, self.right_motor,
-                                               right_vel, simx_opmode_streaming)
+                                               right_vel, opmode)
         err = err_l or err_r
         if err > 1:
             log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
-        # Re-enable comms to push the commands
-        simxPauseCommunication(self.client, False)
+
 
     def setup_control(self, balance_controller):
         self.balance_controller = balance_controller
@@ -65,12 +70,11 @@ class SegwayController(object):
             return True
         else:
             x, y, z = body_pos
-            # Wheel radius 0.08m, box length 0.1m
-            height_condition = 0.04 < z < 0.7
-            lateral_condition = abs(y) < 0.05
-            drive_condition = abs(x) < 1
-            #print z, height_condition, lateral_condition, drive_condition
-            return height_condition and lateral_condition and drive_condition
+            # Wheel radius 0.25m, box length 1.5m -> pos @1m, time in ms
+            height_condition = 0.3 < z < 1.1
+            drive_condition = sqrt(x**2 + y**2) < 2.0
+            time_condition = simulation_time < 30000
+            return height_condition and drive_condition and time_condition
 
 ##### /END CONDITIONS #########################################################
 
@@ -78,8 +82,8 @@ class SegwayController(object):
         # Default condition to something sensible
         condition = condition if condition else self.simulation_run_condition
 
-        simulation_time_tmp = -1
-        simulation_time = 1  # ms
+        simulation_time_current = 0
+        simulation_time_previous = 0  # ms
         cost = 0.0
         ok = True
 
@@ -101,27 +105,29 @@ class SegwayController(object):
                 continue
 
             # Check whether new commands have been executed
-            simulation_time_tmp = simxGetLastCmdTime(self.client)
-            if simulation_time == simulation_time_tmp:
+            simulation_time_current = simxGetLastCmdTime(self.client)
+            if simulation_time_previous == simulation_time_current:
                 continue
-
+            # Calculate dt now that we have times available
+            dt = simulation_time_current - simulation_time_previous
             # Store the time spent until last fetch'd value
-            simulation_time = simulation_time_tmp
+            simulation_time_previous = simulation_time_current
 
-            # Calculate and set control. Pitch is the angle we're primarily
-            # interested in for balance control
+            # Calculate and set control
             roll, pitch, yaw = euler_angles
             droll, dpitch, dyaw = rot_vel
-            control = self.balance_controller.control(pitch)
+            vx, vy, vz = lin_vel
+            x, y, z = position
+            control = self.balance_controller.control(pitch, dt)
             self.set_target_velocities(control, control)
 
-            # Calculcate the cost (abs(ref-val))
-            cost += abs(self.balance_controller.reference - pitch)
+            # Calculcate the current cost and sum it to the total
+            cost += abs(tilt_from_rp(roll, pitch)) + abs((pi/2)*x)
 
             # Check for continuing
-            ok = condition(simulation_time, position)  # lin_vel, rot_vel
+            ok = condition(simulation_time_current, position)
 
-        return (cost / max(simulation_time, 1), simulation_time)
+        return (log10(cost / max(simulation_time_current, 1)**2), simulation_time_current)
 
 
 # log(self.client, 'Euler angles: ' + str(euler_angles))

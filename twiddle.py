@@ -10,7 +10,6 @@ class Twiddle:
         self.params = params
         self.deltas = deltas
         self.tolerance = tolerance
-        self.error_min = float("inf")
 
     def setup(self, **kwargs):
         self.params = kwargs.get("params", self.params)
@@ -21,31 +20,34 @@ class Twiddle:
         """
         Calculate the tuned parameters
         """
-        # Initialize a buffered vector for the best parameters found for
-        # cleaner keyboard interrupt handling
-        self.best_params = [-1 for p in self.params]
+
         # Catch ctrl-Cs here since the interesting data (best params) are here
         try:
+            # Initialize a buffered vector for the best parameters found for
+            # cleaner keyboard interrupt handling
+            best_params = self.params[:]
             # Initial run
-            self.error_min = error_function(self.params)
+            error_min, error_min_time = error_function(self.params)
             # Coordinate descent -> tolerance will be on the param deltas
-            while sum(map(abs, self.deltas)) > self.tolerance:  # self.error_min > self.tolerance
+            while sum(map(abs, self.deltas)) > self.tolerance:  # error_min > self.tolerance
                 for i in range(len(self.params)):
                     self.params[i] += self.deltas[i]
-                    error = error_function(self.params)
-                    if error < self.error_min:
+                    error, sim_time = error_function(self.params)
+                    if error < error_min:
                         # New best result
-                        self.error_min = error
-                        self.best_params = self.params
+                        error_min = float(error)
+                        error_min_time = int(sim_time)
+                        best_params = self.params[:]  # Deep-ish copy
                         self.deltas[i] *= 1.1
                     else:
                         # Was not better, try other way around
                         self.params[i] -= 2*self.deltas[i]
-                        error = error_function(self.params)
-                        if error < self.error_min:
+                        error, sim_time = error_function(self.params)
+                        if error < error_min:
                             # Was best when going the other way
-                            self.error_min = error
-                            self.best_params = self.params
+                            error_min = float(error)
+                            error_min_time = int(sim_time)
+                            best_params = self.params[:]  # Deep-ish copy
                             self.deltas[i] *= 1.1
                         else:
                             # Didn't get better results using previous delta.
@@ -54,4 +56,4 @@ class Twiddle:
                             self.deltas[i] *= 0.9
         except KeyboardInterrupt:
             print "ctrl-C!"  # Do nothing and then pass the params
-        return self.best_params
+        return (best_params, error_min, error_min_time)
