@@ -1,46 +1,142 @@
 #!/usr/bin/env python
 import random
 
+#approach based on the example from 'Reinforcement Learning: An Introduction' by Richard S. Sutton and Andrew G. Barto
+
+one_degree = 0.0174532    # 2pi/360
+six_degrees = 0.1047192
+twelve_degrees = 0.2094384
+fifty_degrees = 0.87266
+
+max_distance = 2.4
+max_speed = 0.5
+max_angle = twelve_degrees
+
 class QLearning():
 
-  def __init__(self, actions, epsilon=0.1, alpha=0.2, gamma=0.9):
-    self.q = {}
-    self.actions = actions
-    self.epsilon = epsilon
-    self.alpha = alpha
-    self.gamma = gamma
+  def __init__(self):
+    self.n_states = 162
+    self.alpha = 1000     # learning rate for action weights
+    self.beta = 0.5       # learning rate for critic weights
+    self.gamma = 0.95     # discount factor for critic
+    self.lambda_w = 0.9   # decay rate for w
+    self.lambda_v = 0.8   # decay rate for v
+    self.max_failures = 100
+    self.max_steps = 100000
 
-  def getQ(self, state, action):
-    reward = -1
-    if state <= 0 and action == 1:
-      f = 1
-    elif state >= 0 and action == 0:
-      reward = 1
+    self.w = [0] * self.n_states
+    self.v = [0] * self.n_states
+    self.e = [0] * self.n_states
+    self.xbar = [0] * self.n_states
+
+    #position, velocity, angle, angle velocity
+    self.x, self.dx, self.t, self.dt = 0, 0, 0, 0
+
+  # matches the current state to an integer between 1 and n_states
+  def get_state(self):
+    state = 0
+
+    # failed
+    if self.x < -max_distance or self.x > max_distance or self.t < -max_angle or self.t > max_angle:
+      return -1
+
+    #position
+    if self.x < -0.8:
+      state = 0
+    elif self.x < 0.8:
+      state = 1
     else:
-      reward = 0
-    #print 'getQ: state: ' + str(state) + ' action: ' + str(action) + ' Q: ' + str(self.q.get((state, action), reward))
-    return self.q.get((state, action), reward)
+      state = 2
 
-  def learn(self, state1, action1, reward, state2):
-    maxQNew = max([self.getQ(state2, a) for a in self.actions])
-    self.learnQ(state1, action1, reward, reward + self.gamma*maxQNew)
-
-  def learnQ(self, state, action, reward, value):
-    oldv = self.q.get((state, action), None)
-    if oldv is None:
-      self.q[(state, action)] = reward
+    #velocity
+    if self.dx < -max_speed:
+      state += 0
+    elif self.dx < 0.5:
+      state += 3
     else:
-      self.q[(state, action)] = oldv + self.alpha * (value - oldv)
+      state += 6
 
-  def chooseAction(self, state):
-    q = [self.getQ(state, a) for a in self.actions]
-    maxQ = max(q)
-
-    if random.random() > 1:
-      best = [i for i in range(len(self.actions)) if q[i] == maxQ]
-      i = random.choice(best)
+    #angle
+    if self.t < -six_degrees:
+      state += 0
+    elif self.t < -one_degree:
+      state += 9
+    elif self.t < 0:
+      state += 27
+    elif self.t < one_degree:
+      state += 36
     else:
-      i = q.index(maxQ)
+      state += 45
 
-    action = self.actions[i]
-    return action
+    #angle velocity
+    if self.dt < -fifty_degrees:
+      state += 0
+    elif self.dt < fifty_degrees:
+      state += 54
+    else:
+      state = 108
+
+    return state
+
+  # reset state to zero
+  def reset(self):
+    self.x, self.dx, self.t, self.dt = 0, 0, 0, 0
+
+  # executes action and updates x, dx, t, dt
+  def do_action(self, action):
+    #TODO execute action,
+    print r
+
+
+if __name__ == '__main__':
+
+  cart = QLearning()
+
+  p, oldp, rhat, r = 0, 0, 0, 0
+
+  state, i, y, steps, failures, failed = 0, 0, 0, 0, 0, False
+
+  # get start state
+  state = cart.get_state()
+
+  while steps < cart.max_steps and failures < cart.max_failures:
+
+    y = random.random()
+
+    cart.e[state] += (1 - cart.lambda_w) * (y - 0.5)
+    cart.xbar[state] += (1 - cart.lambda_v)
+    oldp = cart.v[state]
+    state = cart.get_state()
+
+    # failure
+    if state < 0:
+      failed = True
+      failures += 1
+      steps = 0
+      cart.reset()
+      state = cart.get_state()
+      r = -1
+      p = 0
+    # no failure
+    else:
+      failed = 0
+      r = 0
+      p = cart.v[state]
+
+    rhat = r + cart.gamma * p - oldp
+    for i in range(cart.n_states):
+      cart.w[i] += cart.alpha * rhat * cart.e[i]
+      cart.v[i] += cart.beta * rhat * cart.xbar[i]
+
+      if cart.v[i] < -1.0:
+        cart.v[i] = 0
+
+      if failed == True:
+        cart.e[i] = 0
+        cart.xbar[i] = 0
+      else:
+        cart.e[i] *= cart.lambda_w
+        cart.xbar[i] *= cart.lambda_v
+
+    steps += 1
+

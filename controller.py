@@ -92,16 +92,19 @@ class SegwayController(object):
         err_pos, pos = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
         if err_pos > 0:
             print "Error while getting position"
-        print pos
         return pos
 
-    def get_current_ground_speed(self, part_name="body"):
-        # TODO
-        return 0
+    def get_current_ground_speed(self):
+        err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        if err_vel > 0:
+            print "Error while getting velocity"
+        return lin_vel
 
     def get_current_angle_speed(self, part_name="rightMotor"):
-        # TODO
-        return 0
+        err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        if err_vel > 0:
+            print "Error while getting velocity"
+        return rot_vel
 
     def run(self, condition=None):
         # Default condition to something sensible

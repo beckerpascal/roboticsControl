@@ -9,7 +9,7 @@ from controller import *
 actions = 2 # accelerate/deccelerate
 lastState = None
 lastAction = None
-max_angle = 15
+max_angle = 70
 
 
 def set_target_velocities(self, left_vel, right_vel):
@@ -69,6 +69,10 @@ if __name__ == '__main__':
                     print 'BREAK ========================'
                     break
 
+                cur_vel = controller.get_current_ground_speed()
+                cur_ang_vel = controller.get_current_angle_speed()
+                print 'Vel: ' + str(cur_vel)
+                print 'Angle vel: ' + str(cur_ang_vel)
                 state = round(controller.get_angle_degree(1), 0)
                 print str(int(state)) + ' degrees'
                 reward = (80 - abs(state))/80
