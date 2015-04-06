@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
 # Script directory
 DIR=$( cd "$( dirname "$0" )" && pwd )
-SCENE="segway_big.ttt"
 VREP_WAIT=5s
+SCENE_WAIT=2s
 # Execute headless V-REP
 cd $DIR/V-REP/
 echo ">> Launching V-REP"
-./vrep.sh -h $DIR/vrep/$SCENE &
+./vrep.sh -h &
 echo ">> V-REP launching, wait for $VREP_WAIT"
 sleep $VREP_WAIT
 echo ">> Waited for $VREP_WAIT!"
-echo ">> Start twiddling"
 cd $DIR
+echo ">> Load V-REP scene"
+python loadscene.py
+echo ">> Done loading scene"
+echo ">> Wait for $SCENE_WAIT"
+sleep $SCENE_WAIT
+echo ">> Start twiddling"
 ./simulation.py "$@"
 echo ">> End of twiddling"
 echo ">> Now kill all!"
+#pkill -TERM -P $$
 pkill -TERM -P $(pgrep -P $$)
 sleep 0.1s
 echo ">> All dead"
