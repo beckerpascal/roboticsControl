@@ -23,6 +23,13 @@ class SegwayController(object):
             log(self.client, 'ERROR GetObjectHandle code %d' % err)
         self._send_target_velocities(0.0, 0.0, simx_opmode_oneshot_wait)
 
+    def setup_wheels(self, left_wheel, right_wheel):
+        err_l, self.left_wheel = simxGetObjectHandle(self.client, left_wheel, simx_opmode_oneshot_wait)
+        err_r, self.right_wheel = simxGetObjectHandle(self.client, right_wheel, simx_opmode_oneshot_wait)
+        err = err_l or err_r
+        if err:
+            log(self.client, 'ERROR GetObjectHandle code %d' % err)
+
     def setup_sensors(self, gyro, height):
         # Placeholder
         pass
@@ -91,15 +98,20 @@ class SegwayController(object):
         simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
         simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
         simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
+        simxGetObjectVelocity(self.client, self.left_wheel, simx_opmode_streaming)
+        simxGetObjectVelocity(self.client, self.right_wheel, simx_opmode_streaming)
+
 
         while ok and simxGetConnectionId(self.client) != -1:
             simxPauseCommunication(self.client, True)
             err_rot, euler_angles = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_buffer)
             err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_buffer)
             err_pos, position = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_buffer)
+            err_wheel_left_vel, wheel_left_lin_vel, wheel_left_rot_vel = simxGetObjectVelocity(self.client, self.left_wheel, simx_opmode_streaming)
+            err_wheel_right_vel, wheel_right_lin_vel, wheel_right_rot_vel = simxGetObjectVelocity(self.client, self.right_wheel, simx_opmode_streaming)
             simxPauseCommunication(self.client, False)
 
-            err = err_rot or err_vel or err_pos
+            err = err_rot or err_vel or err_pos or err_wheel_left_vel or err_wheel_right_vel
             if err > 1:
                 print "-- No data right now!"
                 continue
@@ -118,11 +130,15 @@ class SegwayController(object):
             droll, dpitch, dyaw = rot_vel
             vx, vy, vz = lin_vel
             x, y, z = position
+            dtilt_left = tilt_from_rp(wheel_left_rot_vel[0], wheel_left_rot_vel[1])
+            dtilt_right = tilt_from_rp(wheel_right_rot_vel[0], wheel_right_rot_vel[1])
+            dtilt = (dtilt_left + dtilt_right) / 2
             control = self.balance_controller.control(pitch, dt)
             self.set_target_velocities(control, control)
 
-            # Calculcate the current cost and sum it to the total
-            cost += abs(tilt_from_rp(roll, pitch)) + abs((pi/2)*x)
+            # Calculcate the current cost and sum it to the total only after 100ms to prevent a weird spike on first cycles
+            if simulation_time_current > 100:
+                cost += abs(tilt_from_rp(roll, pitch)) + abs((pi/2)*x) + abs(dtilt)
 
             # Check for continuing
             ok = condition(simulation_time_current, position)
