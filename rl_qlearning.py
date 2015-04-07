@@ -2,11 +2,14 @@
 import random
 import math
 import sys
+from time import sleep
 from controller import *
 from util import *
 from vrep import *
 
 #approach based on the example from 'Reinforcement Learning: An Introduction' by Richard S. Sutton and Andrew G. Barto
+
+debug = 0
 
 one_degree = 0.0174532    # 2pi/360
 six_degrees = 0.1047192
@@ -14,10 +17,10 @@ twelve_degrees = 0.2094384
 fifty_degrees = 0.87266
 
 max_distance = 2.4
-max_speed = 0.5
+max_speed = 1
 max_angle = twelve_degrees
 
-class QLearning():
+class ReinforcementLearner():
 
   def __init__(self, controller):
     self.n_states = 162
@@ -87,9 +90,11 @@ class QLearning():
 
     return state
 
-  # reset state to zero
-  def reset(self):
-    self.x, self.dx, self.t, self.dt = 0, 0, 0, 0
+  def read_variables(self):
+    self.x = self.controller.get_current_position()[0]
+    self.dx = self.controller.get_current_ground_speed()[0]
+    self.t = self.controller.get_current_angle()[1]
+    self.dt = self.controller.get_current_angle_speed()[1]
 
   # executes action and updates x, dx, t, dt
   def do_action(self, action):
@@ -97,11 +102,6 @@ class QLearning():
       self.controller.set_target_velocities(max_speed,max_speed)
     else:
       self.controller.set_target_velocities(-max_speed,-max_speed)
-
-    self.x = self.controller.get_current_position()[0]
-    self.dx = self.controller.get_current_ground_speed()[0]
-    self.t = self.controller.get_current_angle()[1]
-    self.dt = self.controller.get_current_angle_speed()[1]
 
 if __name__ == '__main__':
 
@@ -126,45 +126,56 @@ if __name__ == '__main__':
     controller = SegwayController(client)
     controller.setup("body", "leftMotor", "rightMotor")
 
-    cart = QLearning(controller)
+    cart = ReinforcementLearner(controller)
 
     p, oldp, rhat, r = 0, 0, 0, 0
 
-    state, i, y, steps, failures, failed = 0, 0, 0, 0, 0, False
+    state, i, y, steps, failures, failed, startSim = 0, 0, 0, 0, 0, False, True
 
     # get start state
     state = cart.get_state()
 
     while steps < cart.max_steps and failures < cart.max_failures:
-      err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
+      # start simulation in the first step
+      if startSim == True:
+        err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
+        cart.read_variables()
+        startSim = False
+        if debug == 1:
+          print "XXXXXXXXXXXXXXXXXXXXX RESTART XXXXXXXXXXXXXXXXXXXXX"
 
       random1 = random.random()
       random2 = (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50)))))
-      print "random: " + str(random1) + " random2: " + str(random2)
+      if debug == 1:
+        print "random: " + str(random1) + " random2: " + str(random2)
       action = (random1 < random2)
 
       cart.e[state] += (1 - cart.lambda_w) * (y - 0.5)
       cart.xbar[state] += (1 - cart.lambda_v)
       oldp = cart.v[state]
       cart.do_action(action)
+      sleep(0.01)  
+      cart.read_variables()
       state = cart.get_state()
-      print "state: " + str(state) + " x: " + str(cart.x) + " t: " + str(cart.t)
+      if debug == 1:
+        print "state: " + str(state) + " x: " + str(cart.x) + " t: " + str(cart.t)
 
       # failure
       if state < 0:
         failed = True
         failures += 1
+        print "Trial " + str(failures) + " was " + str(steps) + " steps"        
         steps = 0
-        cart.reset()
+        err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)        
         state = cart.get_state()
+        cart.read_variables()        
         r = -1
         p = 0
-        err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)
-        print "Trial " + str(failures) + " was " + str(steps) + " steps"
+        startSim = True
 
       # no failure
       else:
-        failed = 0
+        failed = False
         r = 0
         p = cart.v[state]
 
@@ -176,7 +187,7 @@ if __name__ == '__main__':
         cart.v[i] += cart.beta * rhat * cart.xbar[i]
 
         if cart.v[i] < -1.0:
-          cart.v[i] = 0
+          cart.v[i] = cart.v[i]
 
         if failed == True:
           cart.e[i] = 0
@@ -187,8 +198,7 @@ if __name__ == '__main__':
 
       steps += 1
 
-      if failures == cart.max_failures:
-        print "Pole not balanced. Stopping after " + str(failures) + " failures \n"
-      else:
-        print "Pole balanced successfully for at least " + str(steps) + " steps \n"
-
+    if failures == cart.max_failures:
+      print "Pole not balanced. Stopping after " + str(failures) + " failures \n"
+    else:
+      print "Pole balanced successfully for at least " + str(steps) + " steps \n"
