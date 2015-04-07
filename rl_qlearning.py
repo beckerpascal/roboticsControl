@@ -17,7 +17,7 @@ six_degrees = 0.1047192
 twelve_degrees = 0.2094384
 fifty_degrees = 0.87266
 
-max_distance = 2*2.4
+max_distance = 2.4
 max_speed = 1
 max_angle = twelve_degrees
 
