@@ -81,12 +81,12 @@ class SegwayController(object):
         x, y, z = body_pos
         return z > 0.04  # Wheel radius is 0.08m
 
-    def get_angle_degree(self, rpy):
+    def get_current_angle(self):
         err_or, angle = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
         if err_or > 0:
             print "Error while getting angle"
         # Returns angle (RPY)
-        return angle[rpy] * 180 / M_PI
+        return angle
 
     def get_current_position(self):
         err_pos, pos = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)

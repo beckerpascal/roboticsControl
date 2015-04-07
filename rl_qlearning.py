@@ -26,7 +26,7 @@ class QLearning():
     self.gamma = 0.95     # discount factor for critic
     self.lambda_w = 0.9   # decay rate for w
     self.lambda_v = 0.8   # decay rate for v
-    self.max_failures = 100
+    self.max_failures = 25
     self.max_steps = 100000
 
     self.w = [0] * self.n_states
@@ -93,14 +93,14 @@ class QLearning():
 
   # executes action and updates x, dx, t, dt
   def do_action(self, action):
-    if action > 0:
+    if action == True:
       self.controller.set_target_velocities(max_speed,max_speed)
     else:
       self.controller.set_target_velocities(-max_speed,-max_speed)
 
     self.x = self.controller.get_current_position()[0]
     self.dx = self.controller.get_current_ground_speed()[0]
-    self.t = self.controller.get_angle_degree(1)
+    self.t = self.controller.get_current_angle()[1]
     self.dt = self.controller.get_current_angle_speed()[1]
 
 if __name__ == '__main__':
@@ -138,13 +138,17 @@ if __name__ == '__main__':
     while steps < cart.max_steps and failures < cart.max_failures:
       err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
 
-      action = (random.random() < (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50))))))
+      random1 = random.random()
+      random2 = (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50)))))
+      print "random: " + str(random1) + " random2: " + str(random2)
+      action = (random1 < random2)
 
       cart.e[state] += (1 - cart.lambda_w) * (y - 0.5)
       cart.xbar[state] += (1 - cart.lambda_v)
       oldp = cart.v[state]
       cart.do_action(action)
       state = cart.get_state()
+      print "state: " + str(state) + " x: " + str(cart.x) + " t: " + str(cart.t)
 
       # failure
       if state < 0:
@@ -156,6 +160,7 @@ if __name__ == '__main__':
         r = -1
         p = 0
         err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)
+        print "Trial " + str(failures) + " was " + str(steps) + " steps"
 
       # no failure
       else:
@@ -164,6 +169,8 @@ if __name__ == '__main__':
         p = cart.v[state]
 
       rhat = r + cart.gamma * p - oldp
+
+      # update all weights
       for i in range(cart.n_states):
         cart.w[i] += cart.alpha * rhat * cart.e[i]
         cart.v[i] += cart.beta * rhat * cart.xbar[i]
@@ -179,4 +186,9 @@ if __name__ == '__main__':
           cart.xbar[i] *= cart.lambda_v
 
       steps += 1
+
+      if failures == cart.max_failures:
+        print "Pole not balanced. Stopping after " + str(failures) + " failures \n"
+      else:
+        print "Pole balanced successfully for at least " + str(steps) + " steps \n"
 
