@@ -16,7 +16,7 @@ six_degrees = 0.1047192
 twelve_degrees = 0.2094384
 fifty_degrees = 0.87266
 
-max_distance = 2.4
+max_distance = 2*2.4
 max_speed = 1
 max_angle = twelve_degrees
 
@@ -29,8 +29,8 @@ class ReinforcementLearner():
     self.gamma = 0.95     # discount factor for critic
     self.lambda_w = 0.9   # decay rate for w
     self.lambda_v = 0.8   # decay rate for v
-    self.max_failures = 25
-    self.max_steps = 100000
+    self.max_failures = 100
+    self.max_steps = 1000000
 
     self.w = [0] * self.n_states
     self.v = [0] * self.n_states
@@ -132,31 +132,30 @@ if __name__ == '__main__':
 
     state, i, y, steps, failures, failed, startSim = 0, 0, 0, 0, 0, False, True
 
-    # get start state
-    state = cart.get_state()
-
     while steps < cart.max_steps and failures < cart.max_failures:
       # start simulation in the first step
       if startSim == True:
         err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
+        # get start state
         cart.read_variables()
+        state = cart.get_state()
         startSim = False
         if debug == 1:
           print "XXXXXXXXXXXXXXXXXXXXX RESTART XXXXXXXXXXXXXXXXXXXXX"
 
-      random1 = random.random()
+      random1 = random.random()/((2**31) - 1)
       random2 = (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50)))))
       if debug == 1:
         print "random: " + str(random1) + " random2: " + str(random2)
       action = (random1 < random2)
 
+      #update traces
       cart.e[state] += (1 - cart.lambda_w) * (y - 0.5)
       cart.xbar[state] += (1 - cart.lambda_v)
-      oldp = cart.v[state]
-      cart.do_action(action)
-      sleep(0.01)  
-      cart.read_variables()
-      state = cart.get_state()
+      oldp = cart.v[state]      # remember prediction for the current state
+      cart.do_action(action)    # do action
+      cart.read_variables()     # read new values TODO maybe a bit to close after doing action?!
+      state = cart.get_state()  # get new x, dx, t, dt
       if debug == 1:
         print "state: " + str(state) + " x: " + str(cart.x) + " t: " + str(cart.t)
 
@@ -166,17 +165,16 @@ if __name__ == '__main__':
         failures += 1
         print "Trial " + str(failures) + " was " + str(steps) + " steps"        
         steps = 0
-        err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)        
+        err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)  
+        sleep(0.5)      
         state = cart.get_state()
         cart.read_variables()        
-        r = -1
-        p = 0
+        r = -1  # reward = -1
+        p = 0   # prediction of failure
         startSim = True
-
-      # no failure
-      else:
+      else: # no failure
         failed = False
-        r = 0
+        r = 0   # reward = 0
         p = cart.v[state]
 
       rhat = r + cart.gamma * p - oldp
@@ -193,8 +191,8 @@ if __name__ == '__main__':
           cart.e[i] = 0
           cart.xbar[i] = 0
         else:
-          cart.e[i] *= cart.lambda_w
-          cart.xbar[i] *= cart.lambda_v
+          cart.e[i] = cart.e[i] * cart.lambda_w
+          cart.xbar[i] = cart.xbar[i] * cart.lambda_v
 
       steps += 1
 
@@ -202,3 +200,7 @@ if __name__ == '__main__':
       print "Pole not balanced. Stopping after " + str(failures) + " failures \n"
     else:
       print "Pole balanced successfully for at least " + str(steps) + " steps \n"
+    print "e: " + str(cart.e)
+    print "v: " + str(cart.v)
+    print "w: " + str(cart.w)
+    print "xbar: " + str(cart.xbar)
