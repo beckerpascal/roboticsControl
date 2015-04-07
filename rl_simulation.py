@@ -1,112 +1,206 @@
 #!/usr/bin/env python
+import random
+import math
 import sys
 from time import sleep
-from vrep import *
-from util import *
-from rl_qlearning import *
 from controller import *
+from util import *
+from vrep import *
 
-actions = 2 # accelerate/deccelerate
-lastState = None
-lastAction = None
-max_angle = 70
+#approach based on the example from 'Reinforcement Learning: An Introduction' by Richard S. Sutton and Andrew G. Barto
 
+debug = 0
 
-def set_target_velocities(self, left_vel, right_vel):
-    err_l = None
-    err_r = None
-    # Pause comms to sync the orders
-    simxPauseCommunication(self.client, True)
-    if left_vel is not None:
-        err_l = simxSetJointTargetVelocity(self.client, self.left_motor,
-                                           left_vel, simx_opmode_streaming)
-    if right_vel is not None:
-        err_r = simxSetJointTargetVelocity(self.client, self.right_motor,
-                                           right_vel, simx_opmode_streaming)
-    err = err_l or err_r
-    if err > 1:
-        log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
-    # Re-enable comms to push the commands
-    simxPauseCommunication(self.client, False)
+one_degree = 0.0174532    # 2pi/360
+six_degrees = 0.1047192
+twelve_degrees = 0.2094384
+fifty_degrees = 0.87266
 
-##############################################################################
-# MAIN
-##############################################################################
+max_distance = 2*2.4
+max_speed = 1
+max_angle = twelve_degrees
+
+class ReinforcementLearner():
+
+  def __init__(self, controller):
+    self.n_states = 162
+    self.alpha = 1000     # learning rate for action weights
+    self.beta = 0.5       # learning rate for critic weights
+    self.gamma = 0.95     # discount factor for critic
+    self.lambda_w = 0.9   # decay rate for w
+    self.lambda_v = 0.8   # decay rate for v
+    self.max_failures = 100
+    self.max_steps = 1000000
+
+    self.w = [0] * self.n_states
+    self.v = [0] * self.n_states
+    self.e = [0] * self.n_states
+    self.xbar = [0] * self.n_states
+
+    #position, velocity, angle, angle velocity
+    self.x, self.dx, self.t, self.dt = 0, 0, 0, 0
+
+    self.controller = controller
+
+  # matches the current state to an integer between 1 and n_states
+  def get_state(self):
+    state = 0
+
+    # failed
+    if self.x < -max_distance or self.x > max_distance or self.t < -max_angle or self.t > max_angle:
+      return -1
+
+    #position
+    if self.x < -0.8:
+      state = 0
+    elif self.x < 0.8:
+      state = 1
+    else:
+      state = 2
+
+    #velocity
+    if self.dx < -max_speed:
+      state += 0
+    elif self.dx < 0.5:
+      state += 3
+    else:
+      state += 6
+
+    #angle
+    if self.t < -six_degrees:
+      state += 0
+    elif self.t < -one_degree:
+      state += 9
+    elif self.t < 0:
+      state += 18
+    elif self.t < one_degree:
+      state += 27
+    elif self.t < six_degrees:
+      state += 36
+    else:
+      state += 45
+
+    #angle velocity
+    if self.dt < -fifty_degrees:
+      state += 0
+    elif self.dt < fifty_degrees:
+      state += 54
+    else:
+      state += 108
+
+    return state
+
+  def read_variables(self):
+    self.x = self.controller.get_current_position()[0]
+    self.dx = self.controller.get_current_ground_speed()[0]
+    self.t = self.controller.get_current_angle()[1]
+    self.dt = self.controller.get_current_angle_speed()[1]
+
+  # executes action and updates x, dx, t, dt
+  def do_action(self, action):
+    if action == True:
+      self.controller.set_target_velocities(max_speed,max_speed)
+    else:
+      self.controller.set_target_velocities(-max_speed,-max_speed)
+
 if __name__ == '__main__':
 
-    ai = None
-    ai = QLearning(actions=range(actions), alpha=0.1, gamma=0.9, epsilon=0.1)
+  print '-- Starting master client'
+  simxFinish(-1)  # just in case, close all opened connections
 
-    print '-- Starting master client'
-    simxFinish(-1)  # just in case, close all opened connections
+  # localhost:19997 connects to V-REP global remote API
+  addr = '127.0.0.1'
+  port = 19997
+  print '-- Connecting to %s:%d' % (addr, port)
+  client = simxStart(addr, port, True, True, 5000, 5)
 
-    # localhost:19997 connects to V-REP global remote API
-    addr = '127.0.0.1'
-    port = 19997
-    print '-- Connecting to %s:%d' % (addr, port)
-    client = simxStart(addr, port, True, True, 5000, 5)
+  if client != -1:
+    log(client, 'Master client connected to client %d at port %d' % (client, port))
 
-    if client != -1:
-        log(client, 'Master client connected to client %d at port %d' % (client, port))
-
-        controller = SegwayController(client)
-        controller.setup("body", "leftMotor", "rightMotor")
-
-        roundCounter = 0        
-        while roundCounter < 10:
-            roundCounter += 1
-            err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
-  
-            controller.set_target_velocities(0, 0)
-
-            state = 0
-            stopCounter = 0
-
-            while True:
-                if max_angle < abs(state):
-                    stopCounter = stopCounter + 1
-                if stopCounter > 5:
-                    print 'BREAK ========================'
-                    break
-
-                cur_vel = controller.get_current_ground_speed()
-                cur_ang_vel = controller.get_current_angle_speed()
-                print 'Vel: ' + str(cur_vel)
-                print 'Angle vel: ' + str(cur_ang_vel)
-                state = round(controller.get_angle_degree(1), 0)
-                print str(int(state)) + ' degrees'
-                reward = (80 - abs(state))/80
-                if lastState is not None:
-                  ai.learn(lastState, lastAction, reward, state)
-                  lastState = None
-
-                state = random.randint(0,100) # calcState()
-                action = ai.chooseAction(state)
-                print 'Reward: ' + str(reward)
-                print 'Action: ' + str(action)
-                vel = 10
-                if action == 0:
-                    controller.set_target_velocities(-vel, -vel)
-                else:
-                    controller.set_target_velocities(vel, vel)
-
-                lastState = state
-                lastAction = action 
-
-            # print 'i: ' + str(i) + ' lastState: ' + str(lastState) + ' lastAction: ' + str(lastAction)
-
-            err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)
-            print ai.q
-
-        # # Create a simulation controller to run the tuning
-        # simulation_controller = SimulationController(client)
-        # # Defaults will do for the setup unless we change the model
-        # simulation_controller.setup()
-        # best_params = simulation_controller.run()
-        # print str(best_params)
-
+    err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
+    if err == simx_return_ok:
+        log(client, 'Number of objects in the scene: %d' % len(objs))
     else:
-        print '-- Failed connecting to remote API server'
+        log(client, 'ERROR GetObjects code %d' % err)
 
-    #simxFinish(-1) # Buggy?
-    print '-- Terminating master client'
+    controller = SegwayController(client)
+    controller.setup("body", "leftMotor", "rightMotor")
+
+    cart = ReinforcementLearner(controller)
+
+    p, oldp, rhat, r = 0, 0, 0, 0
+
+    state, i, y, steps, failures, failed, startSim = 0, 0, 0, 0, 0, False, True
+
+    while steps < cart.max_steps and failures < cart.max_failures:
+      # start simulation in the first step
+      if startSim == True:
+        err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
+        # get start state
+        cart.read_variables()
+        state = cart.get_state()
+        startSim = False
+        if debug == 1:
+          print "XXXXXXXXXXXXXXXXXXXXX RESTART XXXXXXXXXXXXXXXXXXXXX"
+
+      random1 = random.random()/((2**31) - 1)
+      random2 = (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50)))))
+      if debug == 1:
+        print "random: " + str(random1) + " random2: " + str(random2)
+      action = (random1 < random2)
+
+      #update traces
+      cart.e[state] += (1 - cart.lambda_w) * (y - 0.5)
+      cart.xbar[state] += (1 - cart.lambda_v)
+      oldp = cart.v[state]      # remember prediction for the current state
+      cart.do_action(action)    # do action
+      cart.read_variables()     # read new values TODO maybe a bit to close after doing action?!
+      state = cart.get_state()  # get new x, dx, t, dt
+      if debug == 1:
+        print "state: " + str(state) + " x: " + str(cart.x) + " t: " + str(cart.t)
+
+      # failure
+      if state < 0:
+        failed = True
+        failures += 1
+        print "Trial " + str(failures) + " was " + str(steps) + " steps"        
+        steps = 0
+        err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)  
+        sleep(0.5)      
+        state = cart.get_state()
+        cart.read_variables()        
+        r = -1  # reward = -1
+        p = 0   # prediction of failure
+        startSim = True
+      else: # no failure
+        failed = False
+        r = 0   # reward = 0
+        p = cart.v[state]
+
+      rhat = r + cart.gamma * p - oldp
+
+      # update all weights
+      for i in range(cart.n_states):
+        cart.w[i] += cart.alpha * rhat * cart.e[i]
+        cart.v[i] += cart.beta * rhat * cart.xbar[i]
+
+        if cart.v[i] < -1.0:
+          cart.v[i] = cart.v[i]
+
+        if failed == True:
+          cart.e[i] = 0
+          cart.xbar[i] = 0
+        else:
+          cart.e[i] = cart.e[i] * cart.lambda_w
+          cart.xbar[i] = cart.xbar[i] * cart.lambda_v
+
+      steps += 1
+
+    if failures == cart.max_failures:
+      print "Pole not balanced. Stopping after " + str(failures) + " failures \n"
+    else:
+      print "Pole balanced successfully for at least " + str(steps) + " steps \n"
+    print "e: " + str(cart.e)
+    print "v: " + str(cart.v)
+    print "w: " + str(cart.w)
+    print "xbar: " + str(cart.xbar)
