@@ -5,10 +5,18 @@ from vrep import *
 from util import *
 from pid import PID
 
+M_PI = 3.14159265359    
+
 class SegwayController(object):
 
     def __init__(self, client):
         self.client = client
+        self.current_position = 0
+
+    def setup(self, body_name="body", left_motor_name="leftMotor", right_motor_name="rightMotor"):
+        self.setup_body(body_name)
+        self.setup_motors(left_motor_name, right_motor_name)
+        self.setup_streaming()
 
     def setup_body(self, body_name):
         err, self.body = simxGetObjectHandle(self.client, body_name, simx_opmode_oneshot_wait)
@@ -26,6 +34,12 @@ class SegwayController(object):
     def setup_sensors(self, gyro, height):
         # Placeholder
         pass
+
+    def setup_streaming(self):
+        # Setup V-REP streaming
+        simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
+        simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
 
     def set_target_velocities(self, left_vel, right_vel):
         # Pause comms to sync the orders
@@ -47,7 +61,6 @@ class SegwayController(object):
         if err > 1:
             log(self.client, 'ERROR SetJointTargetVelocity code %d' % err)
 
-
     def setup_control(self, balance_controller):
         self.balance_controller = balance_controller
 
@@ -65,6 +78,31 @@ class SegwayController(object):
         x, y, z = body_pos
         return z > 0.04  # Wheel radius is 0.08m
 
+    def get_current_angle(self):
+        err_or, angle = simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
+        if err_or > 0:
+            print "Error while getting angle"
+        # Returns angle (RPY)
+        return angle
+
+    def get_current_position(self):
+        err_pos, pos = simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
+        if err_pos > 0:
+            print "Error while getting position"
+        return pos
+
+    def get_current_ground_speed(self):
+        err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        if err_vel > 0:
+            print "Error while getting velocity"
+        return lin_vel
+
+    def get_current_angle_speed(self, part_name="rightMotor"):
+        err_vel, lin_vel, rot_vel = simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
+        if err_vel > 0:
+            print "Error while getting velocity"
+        return rot_vel
+
     def simulation_run_condition(self, simulation_time, body_pos):
         if simulation_time < 100:
             return True
@@ -75,9 +113,7 @@ class SegwayController(object):
             drive_condition = sqrt(x**2 + y**2) < 2.0
             time_condition = simulation_time < 30000
             return height_condition and drive_condition and time_condition
-
-##### /END CONDITIONS #########################################################
-
+    
     def run(self, condition=None):
         # Default condition to something sensible
         condition = condition if condition else self.simulation_run_condition
@@ -87,10 +123,7 @@ class SegwayController(object):
         cost = 0.0
         ok = True
 
-        # Setup V-REP streaming
-        simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
-        simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
-        simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
+        self.setup_streaming()
 
         while ok and simxGetConnectionId(self.client) != -1:
             simxPauseCommunication(self.client, True)
