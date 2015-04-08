@@ -9,24 +9,25 @@ fifty_degrees = 0.87266
 
 class ReinforcementLearner():
 
-  def __init__(self, controller):
-    self.n_states = 162
-    self.alpha = 1000     # learning rate for action weights
-    self.beta = 0.5       # learning rate for critic weights
-    self.gamma = 0.95     # discount factor for critic
-    self.lambda_w = 0.9   # decay rate for w
-    self.lambda_v = 0.8   # decay rate for v
-    self.max_failures = 50
-    self.max_steps = 1000000
+  # initialize a new ReinforcementLearner with some default parameters
+  def __init__(self, controller, n_states=162, alpha=1000, beta=0.5, gamma=0.95, lambda_w=0.9, lambda_v=0.8, max_failures=50, max_steps=1000000, max_distance=2.4, max_speed=1, max_angle_factor=12):
+    self.n_states = n_states
+    self.alpha = alpha     # learning rate for action weights
+    self.beta = beta       # learning rate for critic weights
+    self.gamma = gamma     # discount factor for critic
+    self.lambda_w = lambda_w   # decay rate for w
+    self.lambda_v = lambda_v   # decay rate for v
+    self.max_failures = max_failures
+    self.max_steps = max_steps
 
-    self.max_distance = 2.4
-    self.max_speed = 1
-    self.max_angle = twelve_degrees
+    self.max_distance = max_distance
+    self.max_speed = max_speed
+    self.max_angle = max_angle_factor * one_degree
 
-    self.w = [0] * self.n_states
-    self.v = [0] * self.n_states
-    self.e = [0] * self.n_states
-    self.xbar = [0] * self.n_states
+    self.action_weights = [0] * self.n_states    # action weights
+    self.critic_weights = [0] * self.n_states    # critic weights
+    self.action_weights_elig = [0] * self.n_states    # action weight eligibilities
+    self.critic_weights_elig = [0] * self.n_states # critic weight eligibilities
 
     #position, velocity, angle, angle velocity
     self.x, self.dx, self.t, self.dt = 0, 0, 0, 0
@@ -81,6 +82,7 @@ class ReinforcementLearner():
 
     return state
 
+  # read the variables x, dx, t and dt from vrep
   def read_variables(self):
     self.x = self.controller.get_current_position()[0]
     self.dx = self.controller.get_current_ground_speed()[0]
@@ -93,3 +95,19 @@ class ReinforcementLearner():
       self.controller.set_target_velocities(self.max_speed,self.max_speed)
     else:
       self.controller.set_target_velocities(-self.max_speed,-self.max_speed)
+
+  # update all weights or reset them when failed
+  def update_all_weights(self, rhat, failed):
+    for i in range(self.n_states):
+        self.action_weights[i] += self.alpha * rhat * self.action_weights_elig[i]
+        self.critic_weights[i] += self.beta * rhat * self.critic_weights_elig[i]
+
+        if self.critic_weights[i] < -1.0:
+          self.critic_weights[i] = self.critic_weights[i]
+
+        if failed == True:
+          self.action_weights_elig[i] = 0
+          self.critic_weights_elig[i] = 0
+        else:
+          self.action_weights_elig[i] = self.action_weights_elig[i] * self.lambda_w
+          self.critic_weights_elig[i] = self.critic_weights_elig[i] * self.lambda_v
