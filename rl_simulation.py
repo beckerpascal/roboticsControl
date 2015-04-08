@@ -60,7 +60,7 @@ if __name__ == '__main__':
             # guess new action depending on the weight of the current state
             action = (random.random()/((2**31) - 1) < (1.0 / (1.0 + math.exp(-max(-50, min(cart.action_weights[state], 50))))))
             if debug == 1:
-              print "action: " + str(action)
+                print "action: " + str(action)
 
             #update traces
             cart.action_weights_elig[state] += (1 - cart.lambda_w) * (y - 0.5)
