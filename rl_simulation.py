@@ -2,7 +2,7 @@
 import random
 import math
 import sys
-from time import sleep
+from time import *
 
 from controller import *
 from reinforcementLearner import *
@@ -10,6 +10,8 @@ from util import *
 from vrep import *
 
 # Python file to launch simulation and handling vrep
+
+debug = 0
 
 if __name__ == '__main__':
 
@@ -44,16 +46,17 @@ if __name__ == '__main__':
       # start simulation in the first step
       if startSim == True:
         err = simxStartSimulation(controller.client, simx_opmode_oneshot_wait)
+        now = int(time())
         # get start state
         cart.read_variables()
         state = cart.get_state()
         startSim = False
-        if cart.debug == 1:
+        if debug == 1:
           print "XXXXXXXXXXXXXXXXXXXXX RESTART XXXXXXXXXXXXXXXXXXXXX"
 
       random1 = random.random()/((2**31) - 1)
       random2 = (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50)))))
-      if cart.debug == 1:
+      if debug == 1:
         print "random: " + str(random1) + " random2: " + str(random2)
       action = (random1 < random2)
 
@@ -64,14 +67,15 @@ if __name__ == '__main__':
       cart.do_action(action)    # do action
       cart.read_variables()     # read new values TODO maybe a bit to close after doing action?!
       state = cart.get_state()  # get new x, dx, t, dt
-      if cart.debug == 1:
+      if debug == 1:
         print "state: " + str(state) + " x: " + str(cart.x) + " t: " + str(cart.t)
 
       # failure
       if state < 0:
         failed = True
         failures += 1
-        print "Trial " + str(failures) + " was " + str(steps) + " steps"        
+
+        print "Trial " + str(failures) + " was " + str(steps) + " steps or " + str(int(time()) - now) + " seconds"        
         steps = 0
         err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)  
         sleep(0.5)      

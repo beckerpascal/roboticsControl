@@ -13,7 +13,6 @@ class ReinforcementLearner():
     self.lambda_v = 0.8   # decay rate for v
     self.max_failures = 100
     self.max_steps = 1000000
-    self.debug = 0
 
     self.one_degree = 0.0174532    # 2pi/360
     self.six_degrees = 0.1047192
