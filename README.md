@@ -30,6 +30,9 @@ A few different tunings found out to work more or less well.
 #### a**2 + x**2 / t**2
 - 10ms - 26.11, 1.971, 2925
 
+#### |a| + |x| + |v| / t^2
+- 10ms - 12.73 0.3582 3042
+
 #### Pitch-delta
 - Doomed to drift...
 - 50ms - 0.5, 0.005, 12.5
@@ -42,3 +45,7 @@ A few different tunings found out to work more or less well.
 
 #### a**2 + x**2 / t**2
 - 10ms - 324 3.24 4500
+
+#### |a| + |x| + |v| / t^2
+- 10ms - 80.77 0.5011 330.0
+
