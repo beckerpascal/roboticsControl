@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+one_degree = 0.0174532    # 2pi/360
+six_degrees = 0.1047192
+twelve_degrees = 0.2094384
+fifty_degrees = 0.87266
+
 #approach based on the example from 'Reinforcement Learning: An Introduction' by Richard S. Sutton and Andrew G. Barto
 
 class ReinforcementLearner():
@@ -11,17 +16,12 @@ class ReinforcementLearner():
     self.gamma = 0.95     # discount factor for critic
     self.lambda_w = 0.9   # decay rate for w
     self.lambda_v = 0.8   # decay rate for v
-    self.max_failures = 100
+    self.max_failures = 50
     self.max_steps = 1000000
-
-    self.one_degree = 0.0174532    # 2pi/360
-    self.six_degrees = 0.1047192
-    self.twelve_degrees = 0.2094384
-    self.fifty_degrees = 0.87266
 
     self.max_distance = 2.4
     self.max_speed = 1
-    self.max_angle = self.twelve_degrees
+    self.max_angle = twelve_degrees
 
     self.w = [0] * self.n_states
     self.v = [0] * self.n_states
@@ -58,23 +58,23 @@ class ReinforcementLearner():
       state += 6
 
     #angle
-    if self.t < -self.six_degrees:
+    if self.t < -six_degrees:
       state += 0
-    elif self.t < -self.one_degree:
+    elif self.t < -one_degree:
       state += 9
     elif self.t < 0:
       state += 18
-    elif self.t < self.one_degree:
+    elif self.t < one_degree:
       state += 27
-    elif self.t < self.six_degrees:
+    elif self.t < six_degrees:
       state += 36
     else:
       state += 45
 
     #angle velocity
-    if self.dt < -self.fifty_degrees:
+    if self.dt < -fifty_degrees:
       state += 0
-    elif self.dt < self.fifty_degrees:
+    elif self.dt < fifty_degrees:
       state += 54
     else:
       state += 108

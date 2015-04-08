@@ -27,19 +27,20 @@ if __name__ == '__main__':
   if client != -1:
     log(client, 'Master client connected to client %d at port %d' % (client, port))
 
-    err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
-    if err == simx_return_ok:
-        log(client, 'Number of objects in the scene: %d' % len(objs))
-    else:
-        log(client, 'ERROR GetObjects code %d' % err)
+    if debug == 1:
+        err, objs = simxGetObjects(client, sim_handle_all, simx_opmode_oneshot_wait)
+        if err == simx_return_ok:
+            log(client, 'Number of objects in the scene: %d' % len(objs))
+        else:
+            log(client, 'ERROR GetObjects code %d' % err)
 
     controller = SegwayController(client)
     controller.setup("body", "leftMotor", "rightMotor")
 
     cart = ReinforcementLearner(controller)
 
+    # initialize values
     p, oldp, rhat, r = 0, 0, 0, 0
-
     state, i, y, steps, failures, failed, startSim = 0, 0, 0, 0, 0, False, True
 
     while steps < cart.max_steps and failures < cart.max_failures:
@@ -52,13 +53,15 @@ if __name__ == '__main__':
         state = cart.get_state()
         startSim = False
         if debug == 1:
-          print "XXXXXXXXXXXXXXXXXXXXX RESTART XXXXXXXXXXXXXXXXXXXXX"
+          print "----------------------- RESTART --------------------------"
 
       random1 = random.random()/((2**31) - 1)
       random2 = (1.0 / (1.0 + math.exp(-max(-50, min(cart.w[state], 50)))))
       if debug == 1:
         print "random: " + str(random1) + " random2: " + str(random2)
       action = (random1 < random2)
+      if debug == 1:
+        print "action: " + str(action)
 
       #update traces
       cart.e[state] += (1 - cart.lambda_w) * (y - 0.5)
@@ -74,7 +77,6 @@ if __name__ == '__main__':
       if state < 0:
         failed = True
         failures += 1
-
         print "Trial " + str(failures) + " was " + str(steps) + " steps or " + str(int(time()) - now) + " seconds"        
         steps = 0
         err = simxStopSimulation(controller.client, simx_opmode_oneshot_wait)  
