@@ -11,7 +11,7 @@ fifty_degrees = 0.87266
 class ReinforcementLearner():
 
     # initialize a new ReinforcementLearner with some default parameters
-  def __init__(self, controller, n_states, alpha=1000, beta=0.5, gamma=0.95, lambda_w=0.9, lambda_v=0.8, max_failures=50, max_steps=1000000, max_distance=2.4, max_speed=1, max_angle_factor=12):
+  def __init__(self, controller, alpha=1000, beta=0.5, gamma=0.95, lambda_w=0.9, lambda_v=0.8, max_failures=50, max_steps=1000000, max_distance=2.4, max_speed=1, max_angle_factor=12):
     self.n_states = 162         # 3x3x6x3 = 162 states
     self.alpha = alpha          # learning rate for action weights
     self.beta = beta            # learning rate for critic weights

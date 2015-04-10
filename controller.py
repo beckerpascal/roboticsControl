@@ -47,8 +47,9 @@ class SegwayController(object):
         simxGetObjectOrientation(self.client, self.body, -1, simx_opmode_streaming)
         simxGetObjectVelocity(self.client, self.body, simx_opmode_streaming)
         simxGetObjectPosition(self.client, self.body, -1, simx_opmode_streaming)
-        simxGetObjectVelocity(self.client, self.left_wheel, simx_opmode_streaming)
-        simxGetObjectVelocity(self.client, self.right_wheel, simx_opmode_streaming)
+        if 'left_wheel' in locals():
+            simxGetObjectVelocity(self.client, self.left_wheel, simx_opmode_streaming)
+            simxGetObjectVelocity(self.client, self.right_wheel, simx_opmode_streaming)
 
     def set_target_velocities(self, left_vel, right_vel):
         # Pause comms to sync the orders
