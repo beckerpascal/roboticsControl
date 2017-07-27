@@ -2,6 +2,11 @@
 
 Repository for the class 'Software Technology Course with a Varying Content' and the topic 'Introduction in Artificial Intelligence'.
 
+This repository contains two different controlling algorithms. PID and Reinforcement learning (Q-Learning). The purpose of the lecture was to control a segway-like platform and compare the controlling behavior.
+
+The result is that the PID controller is able to control the model. But it takes a lot of optimization to get the best parameters.
+Also the reinforcement learning agent is able to control the model. It is learning really fast and after four to five failures it balances the segway multiple minutes in place.
+
 Some useful links:
 
 - [V-Rep Doku](http://coppeliarobotics.com/helpFiles/index.html)
@@ -49,3 +54,6 @@ A few different tunings found out to work more or less well.
 #### |a| + |x| + |v| / t^2
 - 10ms - 80.77 0.5011 330.0
 
+## Reinforcement Learning / Q-Learning
+
+The basic Q-Learning approach is used to implement an easy and fast solution to control the segway.
