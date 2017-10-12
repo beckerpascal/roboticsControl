@@ -11,6 +11,20 @@ Some useful links:
 
 - [V-Rep Doku](http://coppeliarobotics.com/helpFiles/index.html)
 
+# Installation
+
+1. Download, extract and install the education version of VREP ([Download-Link](http://www.coppeliarobotics.com/downloads.html))
+2. Clone this repository
+3. Start VREP and open one of the scenes in the folder *vrep*
+  - There are three different sizes of inverted pendulums. All work but have different behavior as mass and height changes
+4. Run *python rl_simulation.py* from a console
+5. See how the the reinforcement learning agent learns to balance the inverted pendulum
+
+# More Information
+If you want to have more information of the reinforcement agent, change the debug flag at line 14 in the file *rl_simulation.py* from 0 to 1
+
+# PID
+In this section you find the evaluated values for a good controlling with a PID controller
 
 ## PID tunings
 
